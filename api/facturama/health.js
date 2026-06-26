@@ -1,12 +1,31 @@
-/* api/facturama/health.js — ¿está configurado el backend de timbrado? */
-const { cors, authHeader } = require('../_lib/facturama');
+/* api/facturama/health.js — Diagnóstico de backend Facturama */
+const { cors, configured, baseUrl, fmFetch, apiPath } = require('../_lib/facturama');
 
-module.exports = (req, res) => {
+module.exports = async (req, res) => {
   cors(res);
   if (req.method === 'OPTIONS') return res.status(204).end();
-  res.status(200).json({
+  if (req.method !== 'GET') return res.status(405).json({ ok: false, error: 'Método no permitido' });
+
+  const env = (req.query && req.query.env) || process.env.FACTURAMA_ENV || 'sandbox';
+  const isConfigured = configured();
+  const info = {
     ok: true,
-    configured: !!authHeader(),                 // true si hay credenciales de Facturama
+    configured: isConfigured,
+    env,
+    baseUrl: baseUrl(env),
     envDefault: process.env.FACTURAMA_ENV || 'sandbox',
-  });
+    mode: env === 'prod' ? 'Producción' : 'Sandbox',
+  };
+
+  if (!isConfigured) {
+    return res.status(200).json({ ...info, reachable: false, ready: false, message: 'Configura FACTURAMA_USER y FACTURAMA_PASSWORD/FACTURAMA_KEY en Vercel.' });
+  }
+
+  try {
+    const healthPath = apiPath('FACTURAMA_HEALTH_PATH', '/api-lite/3/cfdis?type=issued');
+    await fmFetch(env, healthPath, { method: 'GET' });
+    return res.status(200).json({ ...info, reachable: true, ready: true });
+  } catch (e) {
+    return res.status(200).json({ ...info, reachable: false, ready: false, error: e.message, status: e.status || 0, detail: e.data || null });
+  }
 };
