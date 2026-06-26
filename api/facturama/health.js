@@ -18,7 +18,7 @@ module.exports = async (req, res) => {
   };
 
   if (!isConfigured) {
-    return res.status(200).json({ ...info, reachable: false, ready: false, message: 'Configura FACTURAMA_USER y FACTURAMA_PASSWORD/FACTURAMA_KEY en Vercel.' });
+    return res.status(200).json({ ...info, reachable: false, ready: false, message: 'Faltan variables de conexión de Facturama en Vercel.' });
   }
 
   try {
@@ -26,6 +26,17 @@ module.exports = async (req, res) => {
     await fmFetch(env, healthPath, { method: 'GET' });
     return res.status(200).json({ ...info, reachable: true, ready: true });
   } catch (e) {
-    return res.status(200).json({ ...info, reachable: false, ready: false, error: e.message, status: e.status || 0, detail: e.data || null });
+    const authOk = e.status !== 401;
+    const methodOnly = e.status === 405;
+    return res.status(200).json({
+      ...info,
+      reachable: authOk,
+      ready: authOk,
+      authOk,
+      diagnostic: methodOnly ? 'La ruta de prueba respondió 405, pero la autenticación no fue rechazada.' : 'Revisar respuesta del PAC.',
+      error: e.status === 401 ? 'Credenciales rechazadas por Facturama para el entorno seleccionado.' : e.message,
+      status: e.status || 0,
+      detail: e.data || null
+    });
   }
 };
