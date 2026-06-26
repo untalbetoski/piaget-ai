@@ -1,0 +1,11 @@
+# Artefactos del editor / sistema (no necesarios para el deploy)
+scraps/
+screenshots/
+uploads/
+.thumbnail
+.DS_Store
+node_modules/
+*.log
+.env
+.env.local
+.vercel
