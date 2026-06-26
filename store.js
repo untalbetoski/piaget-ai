@@ -5,11 +5,18 @@
    • MODO SUPABASE (config con llaves): lee/escribe en Postgres
      vía @supabase/supabase-js y se sincroniza en tiempo real.
    La UI siempre lee de window.DB y muta con window.Store.*
+
+   Nota técnica:
+   Las colecciones base conservan tablas relacionales tradicionales.
+   Los módulos ampliados usan tablas flexibles con { id, payload }
+   para soportar todos los campos de cada módulo sin romper por
+   columnas nuevas.
    ============================================================ */
 (function () {
   const cfg = window.PIAGET_CONFIG || {};
   const LSKEY = window.PIAGET_FRESH ? 'piaget_db_v12_fresh' : 'piaget_db_v12';
   const SYNCED = ['students', 'staff', 'processes', 'invoices', 'leads', 'announcements', 'agents', 'matriculas', 'docs', 'evaluaciones', 'diario', 'tareas', 'tickets', 'facturas', 'cobros', 'docentes', 'products', 'ventas', 'onlineOrders', 'missions', 'missionSubmissions', 'badges', 'rewards', 'engage_retos', 'engageParticipations', 'familyAccounts', 'egresos', 'experiences'];
+  const JSON_SYNCED = new Set(['matriculas', 'docs', 'evaluaciones', 'diario', 'tareas', 'tickets', 'facturas', 'cobros', 'docentes', 'products', 'ventas', 'onlineOrders', 'missions', 'missionSubmissions', 'badges', 'rewards', 'engage_retos', 'engageParticipations', 'familyAccounts', 'egresos', 'experiences']);
 
   const uid = () => (crypto.randomUUID ? crypto.randomUUID() : 'id-' + Math.random().toString(36).slice(2) + Date.now());
   const clone = (o) => JSON.parse(JSON.stringify(o));
@@ -63,6 +70,14 @@
       const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s);
     });
   }
+  const stripMeta = (o) => { const x = { ...(o || {}) }; delete x._id; return x; };
+  function rowToItem(coll, row) {
+    if (JSON_SYNCED.has(coll)) return { ...(row.payload || {}), _id: row.id };
+    return { ...row, _id: row.id };
+  }
+  function itemToPayload(item) {
+    return stripMeta(item || {});
+  }
   async function initSupabase() {
     try {
       await loadScript('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js');
@@ -71,7 +86,8 @@
       Store.mode = 'supabase';
       for (const c of SYNCED) {
         const { data, error } = await sb.from(c).select('*');
-        if (!error && Array.isArray(data) && data.length) state[c] = data.map(r => ({ ...r, _id: r.id }));
+        if (!error && Array.isArray(data) && data.length) state[c] = data.map(r => rowToItem(c, r));
+        if (error) console.warn('[PIAGET] Supabase select ' + c, error.message);
       }
       window.DB = state; emit(false);
       if (cfg.realtime) {
@@ -88,18 +104,28 @@
   async function refreshCollection(c) {
     if (!sb) return;
     const { data, error } = await sb.from(c).select('*');
-    if (!error && data) { state[c] = data.map(r => ({ ...r, _id: r.id })); emit(false); }
+    if (!error && data) { state[c] = data.map(r => rowToItem(c, r)); emit(false); }
   }
   function push(op, coll, payload) {
     if (Store.mode !== 'supabase' || !sb) return;
     const t = sb.from(coll);
     let q;
-    if (op === 'insert') q = t.insert([{ ...stripMeta(payload.item), id: payload.item._id }]);
-    else if (op === 'update') q = t.update(stripMeta(payload.patch)).eq('id', payload.id);
-    else if (op === 'delete') q = t.delete().eq('id', payload.id);
+    if (JSON_SYNCED.has(coll)) {
+      if (op === 'insert') {
+        q = t.insert([{ id: payload.item._id, payload: itemToPayload(payload.item) }]);
+      } else if (op === 'update') {
+        const current = (state[coll] || []).find(x => x._id === payload.id);
+        q = t.update({ payload: itemToPayload(current || payload.patch || {}) }).eq('id', payload.id);
+      } else if (op === 'delete') {
+        q = t.delete().eq('id', payload.id);
+      }
+    } else {
+      if (op === 'insert') q = t.insert([{ ...stripMeta(payload.item), id: payload.item._id }]);
+      else if (op === 'update') q = t.update(stripMeta(payload.patch)).eq('id', payload.id);
+      else if (op === 'delete') q = t.delete().eq('id', payload.id);
+    }
     if (q) q.then(({ error }) => { if (error) console.warn('[PIAGET] Supabase ' + op + ' ' + coll, error.message); });
   }
-  const stripMeta = (o) => { const x = { ...o }; delete x._id; return x; };
 
   /* ---------- API pública ---------- */
   const Store = {
