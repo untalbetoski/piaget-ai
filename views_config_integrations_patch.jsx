@@ -1,23 +1,40 @@
 /* views_config_integrations_patch.jsx
-   Corrige el módulo Configuración → Integraciones.
-   Antes conectaba/desconectaba solo en estado local; ahora vive dentro de
-   DB.settings.integrationsDetailed y se guarda con el botón Guardar cambios. */
+   Configuración → Integraciones con acciones reales.
+   Los cambios actualizan cfg.integrationsDetailed, DB.integrations y quedan
+   listos para guardarse en Supabase con el botón Guardar cambios. */
 (function () {
-  const baseIntegrations = () => (DB.integrations || []).map(x => ({ ...x }));
+  function baseIntegrations() {
+    return [
+      { key: 'supabase', name: 'Supabase', desc: 'Base de datos, auth y storage', icon: 'layers', tone: 'green', connected: true, account: 'veqlmltuyouqprpoxvkt.supabase.co', lastSync: 'En vivo' },
+      { key: 'pagos', name: 'Stripe', desc: 'Cobros con tarjeta en línea', icon: 'card', tone: 'violet', connected: false, account: '—', lastSync: '—' },
+      { key: 'facturacion', name: 'Facturama (CFDI)', desc: 'Timbrado automático ante el SAT', icon: 'receipt', tone: 'cyan', connected: true, account: 'API Multiemisor', lastSync: 'hace 1 h' },
+      { key: 'mensajeria', name: 'WhatsApp Business', desc: 'Avisos y recordatorios a familias', icon: 'message', tone: 'green', connected: false, account: '—', lastSync: '—' },
+      { key: 'correo', name: 'Resend (correo)', desc: 'Correos transaccionales y boletines', icon: 'mail', tone: 'amber', connected: true, account: 'no-reply@jeanpiaget.mx', lastSync: 'hace 12 min' },
+      { key: 'gclass', name: 'Google Classroom', desc: 'Sincroniza grupos y tareas', icon: 'cap', tone: 'red', connected: false, account: '—', lastSync: '—' },
+      { key: 'calendar', name: 'Google Calendar', desc: 'Eventos y calendario escolar', icon: 'calendar', tone: 'blue', connected: true, account: 'direccion@jeanpiaget.mx', lastSync: 'hace 30 min' },
+      { key: 'analytics', name: 'Metabase BI', desc: 'Tableros y analítica avanzada', icon: 'chart', tone: 'violet', connected: false, account: '—', lastSync: '—' },
+    ];
+  }
 
   function normalizeIntegrations(list) {
+    const base = baseIntegrations();
     const current = Array.isArray(list) ? list : [];
     const byKey = Object.fromEntries(current.map(i => [i.key, i]));
-    return baseIntegrations().map(it => ({ ...it, ...(byKey[it.key] || {}) }));
+    return base.map(it => ({ ...it, ...(byKey[it.key] || {}) }));
+  }
+
+  function publish(next) {
+    DB.integrations = next.map(i => ({ ...i }));
+    DB.settings.integrationsDetailed = next.map(i => ({ ...i }));
+    window.dispatchEvent(new Event('piaget-settings'));
   }
 
   try {
     const saved = JSON.parse(localStorage.getItem('piaget_settings') || 'null');
-    const savedList = saved && saved.integrationsDetailed;
-    DB.settings.integrationsDetailed = normalizeIntegrations(savedList || DB.settings.integrationsDetailed || DB.integrations);
-    DB.integrations = DB.settings.integrationsDetailed.map(i => ({ ...i }));
+    const list = (saved && saved.integrationsDetailed) || DB.settings.integrationsDetailed || DB.integrations;
+    publish(normalizeIntegrations(list));
   } catch (_) {
-    DB.settings.integrationsDetailed = normalizeIntegrations(DB.settings.integrationsDetailed || DB.integrations);
+    publish(normalizeIntegrations(DB.settings.integrationsDetailed || DB.integrations));
   }
 
   function CfgIntegrations({ cfg, set }) {
@@ -25,12 +42,14 @@
     const connectedCount = integrations.filter(i => i.connected).length;
 
     const saveList = next => {
-      DB.integrations = next.map(i => ({ ...i }));
-      set('integrationsDetailed', next.map(i => ({ ...i })));
+      const clean = next.map(i => ({ ...i }));
+      publish(clean);
+      if (typeof set === 'function') set('integrationsDetailed', clean);
+      else toast('No se encontró el guardador de configuración', 'warn');
     };
 
     const updateOne = (key, patch) => {
-      const next = integrations.map(i => i.key === key ? { ...i, ...patch } : i);
+      const next = integrations.map(i => i.key === key ? { ...i, ...patch, updatedAt: new Date().toISOString() } : i);
       saveList(next);
     };
 
@@ -39,14 +58,15 @@
       updateOne(it.key, {
         connected: now,
         account: now ? (it.account && it.account !== '—' ? it.account : 'Pendiente de configurar') : '—',
-        lastSync: now ? 'Pendiente de sincronizar' : '—'
+        lastSync: now ? 'Pendiente de sincronizar' : '—',
+        status: now ? 'connected' : 'inactive'
       });
       toast(it.name + (now ? ' conectado ✓' : ' desconectado'), now ? 'ok' : 'warn');
     };
 
     const sync = it => {
       if (!it.connected) { toast('Conecta primero ' + it.name, 'warn'); return; }
-      updateOne(it.key, { lastSync: 'Ahora' });
+      updateOne(it.key, { lastSync: 'Ahora', lastSyncAt: new Date().toISOString(), status: 'connected' });
       toast('Sincronización registrada para ' + it.name, 'ok');
     };
 
@@ -54,7 +74,8 @@
       const current = it.account && it.account !== '—' ? it.account : '';
       const value = window.prompt('Cuenta / identificador para ' + it.name, current);
       if (value == null) return;
-      updateOne(it.key, { account: value.trim() || '—', lastSync: it.connected ? 'Ahora' : '—' });
+      const account = value.trim() || '—';
+      updateOne(it.key, { account, connected: account !== '—' ? it.connected : false, lastSync: account !== '—' && it.connected ? 'Ahora' : it.lastSync });
       toast('Ajustes de ' + it.name + ' actualizados ✓');
     };
 
@@ -64,12 +85,12 @@
 
         <div className="ai-panel">
           <div className="insight" style={{ borderTop: 'none', alignItems: 'flex-start' }}>
-            <div className="insight-ico" style={{ background: 'var(--amber-soft)', color: 'var(--amber)' }}><Icon name="shield" size={16} /></div>
+            <div className="insight-ico" style={{ background: 'var(--green-soft)', color: 'var(--green)' }}><Icon name="shield" size={16} /></div>
             <div className="insight-body">
-              <div className="insight-title">Estado de configuración persistente</div>
-              <div className="insight-text">Los cambios quedan dentro de Configuración y se guardan al presionar <b>Guardar cambios</b>. Las credenciales privadas deben configurarse en backend o variables de entorno, no en el navegador.</div>
+              <div className="insight-title">Configuración centralizada</div>
+              <div className="insight-text">Conectar, desconectar, sincronizar o editar una integración marca cambios pendientes. Presiona <b>Guardar cambios</b> para persistirlos en Supabase.</div>
             </div>
-            <Badge tone="blue" dot>Listo para guardar</Badge>
+            <Badge tone="green" dot>Supabase listo</Badge>
           </div>
         </div>
 
@@ -95,9 +116,9 @@
                     {on ? ((it.account || 'Pendiente') + ' · ' + (it.lastSync || 'Sin sincronizar')) : 'Sin configurar'}
                   </div>
                   <div className="row gap-8" style={{ flexShrink: 0 }}>
-                    <button className="btn sm" onClick={() => editAccount(it)}><Icon name="settings" size={13} className="btn-ico" />Ajustes</button>
-                    {on && <button className="btn sm" onClick={() => sync(it)}><Icon name="refresh" size={13} className="btn-ico" />Sync</button>}
-                    <button className={'btn sm' + (on ? '' : ' primary')} onClick={() => toggle(it)}>{on ? 'Desconectar' : 'Conectar'}</button>
+                    <button type="button" className="btn sm" onClick={() => editAccount(it)}><Icon name="settings" size={13} className="btn-ico" />Ajustes</button>
+                    <button type="button" className="btn sm" onClick={() => sync(it)} disabled={!on} style={!on ? { opacity: 0.45 } : {}}><Icon name="refresh" size={13} className="btn-ico" />Sync</button>
+                    <button type="button" className={'btn sm' + (on ? '' : ' primary')} onClick={() => toggle(it)}>{on ? 'Desconectar' : 'Conectar'}</button>
                   </div>
                 </div>
               </div>
