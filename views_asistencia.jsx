@@ -1,0 +1,387 @@
+/* views_asistencia.jsx — Gestión › Asistencia
+   Dashboard + panel lateral para pasar lista + detalle de alumno (drill-down). */
+
+(function () {
+  if (document.getElementById('as-panel-style')) return;
+  const s = document.createElement('style'); s.id = 'as-panel-style';
+  s.textContent = '@keyframes asPanelIn{from{transform:translateX(100%)}to{transform:translateX(0)}}@keyframes asScrimIn{from{opacity:0}to{opacity:1}}';
+  document.head.appendChild(s);
+})();
+
+function AsStatusToggle({ value, onPick, size }) {
+  return (
+    <div className="seg" style={{ padding: 2 }}>
+      {AS_STATUS_ORDER.map(id => {
+        const s = AS_STATUS[id]; const on = value === id;
+        return (
+          <button key={id} onClick={() => onPick(id)} title={s.label}
+            style={{ padding: size === 'sm' ? '3px 8px' : '4px 10px', borderRadius: 6, border: 'none', fontWeight: 700, fontSize: 12, cursor: 'pointer', background: on ? s.color : 'transparent', color: on ? '#fff' : 'var(--text-faint)' }}>{s.short}</button>
+        );
+      })}
+    </div>
+  );
+}
+function AsPct({ pct }) {
+  const color = pct >= 95 ? 'var(--green)' : pct >= 90 ? 'var(--accent)' : pct >= 80 ? 'var(--amber)' : 'var(--red)';
+  return <span className="tnum font-mono" style={{ fontWeight: 700, color }}>{pct}%</span>;
+}
+
+/* ====================================================================
+   PANEL: pasar lista (slide-over)
+   ==================================================================== */
+function AsPanel({ group, edits, just, setStatus, setJust, onClose, openStudent }) {
+  const statusOf = (d, g, n) => asStatusOf(edits, d, g, n);
+  const justOf = (d, g, n) => asJustOf(just, d, g, n);
+  const clase = asClaseOf(group);
+  const roster = React.useMemo(() => asRoster(clase), [group]);
+  const days = asSchoolDays(10);
+  const [date, setDate] = React.useState(asTodayISO());
+  const idx = days.indexOf(date);
+  const c = asDayCounts(edits, date, group, roster);
+
+  function pick(name, val) {
+    setStatus(date, group, name, val);
+    if (val === 'justificado' && !justOf(date, group, name)) setJust(date, group, name, { motivo: AS_MOTIVOS[0], recibido: true });
+  }
+  function markAll() { roster.forEach(n => setStatus(date, group, n, 'presente')); toast('Todos marcados presentes ✓'); }
+  function save() { Store.log('Docente', 'pasó lista de ' + asShortGroup(group) + ' · ' + asDateLabel(date) + ' (' + c.pct + '% asistencia)', 'checkCircle'); toast('Asistencia guardada · ' + asShortGroup(group) + ' ✓'); }
+  function avisar() { const aus = roster.filter(n => statusOf(date, group, n) === 'ausente'); toast(aus.length ? ('Aviso enviado a ' + aus.length + ' familia(s) de ausentes ✓') : 'No hay ausencias sin justificar', aus.length ? 'ok' : 'info'); }
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(8,12,24,0.46)', zIndex: 59, animation: 'asScrimIn .2s ease' }} />
+      <aside style={{ position: 'fixed', top: 0, right: 0, height: '100vh', width: 'min(560px, 94vw)', background: 'var(--surface)', borderLeft: '1px solid var(--border)', boxShadow: '-18px 0 50px -20px rgba(0,0,0,0.35)', zIndex: 60, display: 'flex', flexDirection: 'column', animation: 'asPanelIn .24s cubic-bezier(.4,0,.2,1)' }}>
+        <div className="row between center" style={{ padding: '16px 18px', borderBottom: '1px solid var(--border)' }}>
+          <div>
+            <div className="row center gap-8"><span style={{ fontWeight: 600, fontFamily: 'var(--font-display)', fontSize: 17 }}>Grupo {asShortGroup(group)}</span><Badge tone={window.nivelCfg ? nivelCfg(clase.nivel).tone : 'blue'}>{clase ? clase.nivel : ''}</Badge></div>
+            <div className="faint" style={{ fontSize: 12, marginTop: 2 }}>{roster.length} alumnos · {clase ? clase.titular : ''}</div>
+          </div>
+          <button className="icon-btn" onClick={onClose}><Icon name="x" size={18} /></button>
+        </div>
+
+        {/* fecha + resumen */}
+        <div style={{ padding: '12px 18px', borderBottom: '1px solid var(--border)' }}>
+          <div className="row center between gap-8" style={{ marginBottom: 10 }}>
+            <button className="icon-btn" disabled={idx <= 0} onClick={() => idx > 0 && setDate(days[idx - 1])} style={{ opacity: idx <= 0 ? 0.4 : 1 }}><Icon name="chevR" size={16} style={{ transform: 'rotate(180deg)' }} /></button>
+            <div className="row center gap-8"><Icon name="calendar" size={14} className="faint" /><span style={{ fontWeight: 600, fontSize: 13.5 }}>{asDateLabel(date)}</span><span className="faint font-mono" style={{ fontSize: 11.5 }}>{date}</span></div>
+            <button className="icon-btn" disabled={idx >= days.length - 1} onClick={() => idx < days.length - 1 && setDate(days[idx + 1])} style={{ opacity: idx >= days.length - 1 ? 0.4 : 1 }}><Icon name="chevR" size={16} /></button>
+          </div>
+          <div className="row gap-8 wrap">
+            {AS_STATUS_ORDER.map(id => <Badge key={id} tone={AS_STATUS[id].tone} dot>{c[id]} {AS_STATUS[id].label.toLowerCase()}{c[id] === 1 ? '' : 's'}</Badge>)}
+            <span className="grow" />
+            <span className="row center gap-6" style={{ fontSize: 12.5 }}>Asistencia <AsPct pct={c.pct} /></span>
+          </div>
+        </div>
+
+        {/* roster */}
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+          {roster.map(name => {
+            const s = statusOf(date, group, name);
+            const j = s === 'justificado' ? (justOf(date, group, name) || { motivo: AS_MOTIVOS[0] }) : null;
+            return (
+              <div key={name} style={{ borderBottom: '1px solid var(--border)' }}>
+                <div className="lrow" style={{ borderBottom: 'none' }}>
+                  <button className="row center gap-8 grow" onClick={() => openStudent(name, group)} style={{ background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer', minWidth: 0 }}>
+                    <Avatar name={name} size={32} />
+                    <span style={{ fontWeight: 600, fontSize: 13.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</span>
+                    {asChronic(group, name) && <Icon name="alert" size={13} style={{ color: 'var(--amber)', flexShrink: 0 }} title="Ausentismo recurrente" />}
+                  </button>
+                  <AsStatusToggle value={s} onPick={v => pick(name, v)} />
+                </div>
+                {j && (
+                  <div className="row center gap-8" style={{ padding: '0 16px 12px 56px' }}>
+                    <Icon name="doc" size={13} className="faint" />
+                    <select className="inp" value={j.motivo} onChange={e => setJust(date, group, name, { motivo: e.target.value, recibido: true })} style={{ height: 30, fontSize: 12, width: 'auto', minWidth: 160 }}>
+                      {AS_MOTIVOS.map(m => <option key={m} value={m}>{m}</option>)}
+                    </select>
+                    <span className="faint" style={{ fontSize: 11.5 }}>justificante registrado</span>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* acciones */}
+        <div className="row center gap-8" style={{ padding: '12px 16px', borderTop: '1px solid var(--border)' }}>
+          <button className="btn sm" onClick={markAll}><Icon name="checkCircle" size={13} className="btn-ico" />Todos presentes</button>
+          <button className="btn sm" onClick={avisar}><Icon name="megaphone" size={13} className="btn-ico" />Avisar ausentes</button>
+          <span className="grow" />
+          <button className="btn primary" onClick={() => { save(); onClose(); }}><Icon name="check" size={15} className="btn-ico" />Guardar</button>
+        </div>
+      </aside>
+    </>
+  );
+}
+
+/* ====================================================================
+   DETALLE DE ALUMNO (drill-down)
+   ==================================================================== */
+function AsStudentDetail({ name, group, edits, just, setStatus, setJust, onBack }) {
+  const statusOf = (d, g, n) => asStatusOf(edits, d, g, n);
+  const justOf = (d, g, n) => asJustOf(just, d, g, n);
+  const days = asSchoolDays(20);
+  const clase = asClaseOf(group);
+  const st = asStudentStats(edits, group, name, days);
+  const risk = asRiskLevel(st.pct);
+  const stu = (DB.students || []).find(s => s.name === name);
+
+  const riskCfg = { high: ['red', 'Riesgo alto de ausentismo'], mid: ['amber', 'Asistencia irregular'], low: ['green', 'Asistencia regular'] }[risk];
+  const recientes = st.series.slice().reverse().filter(d => d.status !== 'presente').slice(0, 8);
+
+  function justificarUltima() {
+    const last = st.series.slice().reverse().find(d => d.status === 'ausente');
+    if (!last) { toast('No hay ausencias sin justificar', 'info'); return; }
+    setStatus(last.date, group, name, 'justificado');
+    setJust(last.date, group, name, { motivo: AS_MOTIVOS[0], recibido: true });
+    toast('Justificante registrado para ' + asDateLabel(last.date) + ' ✓');
+  }
+
+  const kpis = [
+    { label: 'Asistencia', value: st.pct + '%', tone: st.pct >= 90 ? 'green' : st.pct >= 80 ? 'amber' : 'red' },
+    { label: 'Faltas', value: String(st.ausente), tone: st.ausente ? 'red' : 'gray' },
+    { label: 'Retardos', value: String(st.retardo), tone: st.retardo ? 'amber' : 'gray' },
+    { label: 'Justificadas', value: String(st.justificado), tone: 'cyan' },
+  ];
+
+  return (
+    <div className="content-inner">
+      <button className="btn sm" onClick={onBack} style={{ marginBottom: 14 }}><Icon name="chevR" size={14} className="btn-ico" style={{ transform: 'rotate(180deg)' }} />Volver a asistencia</button>
+      <div className="row between center wrap gap-12" style={{ marginBottom: 18 }}>
+        <div className="row center gap-12">
+          <Avatar name={name} size={52} />
+          <div>
+            <h1 className="page-title" style={{ marginBottom: 4 }}>{name}</h1>
+            <div className="row center gap-8 wrap">
+              <Badge tone={window.nivelCfg ? nivelCfg(clase.nivel).tone : 'blue'}>{clase ? clase.nivel : ''}</Badge>
+              <span className="faint" style={{ fontSize: 12.5 }}>Grupo {asShortGroup(group)}{stu ? ' · Tutor: ' + stu.tutor : ''}</span>
+              <Badge tone={riskCfg[0]} dot>{riskCfg[1]}</Badge>
+            </div>
+          </div>
+        </div>
+        <div className="row gap-8">
+          <button className="btn" onClick={justificarUltima}><Icon name="doc" size={15} className="btn-ico" />Justificar falta</button>
+          <button className="btn primary" onClick={() => { Store.log('Docente', 'notificó a la familia de ' + name + ' sobre su asistencia', 'megaphone'); toast('Aviso enviado a la familia de ' + name + ' ✓'); }}><Icon name="megaphone" size={15} className="btn-ico" />Avisar a la familia</button>
+        </div>
+      </div>
+
+      <div className="kpi-row" style={{ gridTemplateColumns: 'repeat(4,1fr)' }}>
+        {kpis.map((k, i) => { const t = window.TONE[k.tone] || window.TONE.gray; return <div className="card kpi" key={i}><div className="kpi-label">{k.label}</div><div className="kpi-value tnum" style={{ color: t.c }}>{k.value}</div></div>; })}
+      </div>
+
+      <div className="grid mt-16" style={{ gridTemplateColumns: '1.5fr 1fr', alignItems: 'start' }}>
+        <div className="card pad">
+          <CardHead icon="calendar" title="Últimos 20 días hábiles" sub="Registro diario de asistencia" />
+          <div className="row wrap" style={{ gap: 7, marginTop: 8 }}>
+            {st.series.map(d => {
+              const s = AS_STATUS[d.status];
+              return (
+                <div key={d.date} title={asDateLabel(d.date) + ' · ' + s.label} className="col center" style={{ gap: 4 }}>
+                  <div style={{ width: 30, height: 30, borderRadius: 8, background: s.color, opacity: d.status === 'presente' ? 0.85 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: 11.5 }}>{s.short}</div>
+                  <span className="faint" style={{ fontSize: 9.5 }}>{asDayShort(d.date)}</span>
+                </div>
+              );
+            })}
+          </div>
+          <div className="row gap-12 wrap" style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+            {AS_STATUS_ORDER.map(id => <span key={id} className="row center gap-6 faint" style={{ fontSize: 11.5 }}><span style={{ width: 9, height: 9, borderRadius: 3, background: AS_STATUS[id].color }} />{AS_STATUS[id].label}</span>)}
+          </div>
+        </div>
+
+        <div className="card pad" style={{ alignSelf: 'start' }}>
+          <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 10 }}>Incidencias recientes</div>
+          {recientes.length ? (
+            <div className="col gap-8">
+              {recientes.map(d => {
+                const s = AS_STATUS[d.status]; const j = d.status === 'justificado' ? justOf(d.date, group, name) : null;
+                return (
+                  <div key={d.date} className="row center gap-8">
+                    <span style={{ width: 8, height: 8, borderRadius: 999, background: s.color, flexShrink: 0 }} />
+                    <span className="grow" style={{ fontSize: 12.5 }}>{asDateLabel(d.date)}</span>
+                    {j && <span className="faint" style={{ fontSize: 11 }}>{j.motivo}</span>}
+                    <Badge tone={s.tone}>{s.label}</Badge>
+                  </div>
+                );
+              })}
+            </div>
+          ) : <div className="faint" style={{ fontSize: 12.5, padding: '6px 0' }}>Sin incidencias. Asistencia perfecta. 🎉</div>}
+          {st.streak >= 2 && <div className="row center gap-8" style={{ marginTop: 12, padding: '9px 11px', background: 'var(--red-soft)', borderRadius: 'var(--r-sm)' }}><Icon name="alert" size={15} style={{ color: 'var(--red)' }} /><span style={{ fontSize: 12, color: 'var(--red)', fontWeight: 600 }}>{st.streak} inasistencias consecutivas</span></div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ====================================================================
+   DASHBOARD
+   ==================================================================== */
+function AsDashboard({ nivelFilter, setNivelFilter, edits, openPanel, openStudent }) {
+  const [analysis, setAnalysis] = React.useState(null);
+  const [analyzing, setAnalyzing] = React.useState(false);
+  React.useEffect(() => { setAnalysis(null); }, [nivelFilter]);
+
+  const allClases = asClases();
+  const clases = nivelFilter === 'Todos' ? allClases : allClases.filter(c => c.nivel === nivelFilter);
+  const days = asSchoolDays(10);
+  const { ov, trend, risk } = React.useMemo(() => ({
+    ov: asOverview(edits, clases),
+    trend: asTrend(edits, clases, days),
+    risk: asRiskStudents(edits, clases, asSchoolDays(20)),
+  }), [edits, nivelFilter]);
+  const scopeLabel = window.docScope() ? 'mis grupos' : (nivelFilter === 'Todos' ? 'toda la institución' : nivelFilter);
+
+  async function analyze() {
+    if (analyzing) return; setAnalyzing(true); setAnalysis(null);
+    const [r] = await Promise.all([asAnalyzeAI(scopeLabel, ov, risk), new Promise(res => setTimeout(res, 1300))]);
+    setAnalysis(r); setAnalyzing(false);
+  }
+
+  const donutSegs = AS_STATUS_ORDER.map(id => ({ label: AS_STATUS[id].label, value: ov[id], color: AS_STATUS[id].color })).filter(s => s.value > 0);
+  const kpis = [
+    { label: 'Asistencia hoy', value: ov.pct + '%', icon: 'checkCircle', tone: ov.pct >= 90 ? 'green' : ov.pct >= 80 ? 'amber' : 'red' },
+    { label: 'Ausentes', value: String(ov.ausente), icon: 'x', tone: 'red' },
+    { label: 'Retardos', value: String(ov.retardo), icon: 'clock', tone: 'amber' },
+    { label: 'Justificadas', value: String(ov.justificado), icon: 'doc', tone: 'cyan' },
+  ];
+
+  return (
+    <div className="content-inner">
+      <PageHead eyebrow="Gestión" title="Asistencia" desc={asDateLabel(ov.date) + ' · ' + ov.total + ' alumnos · ' + scopeLabel}>
+        <button className="btn primary" onClick={() => clases[0] && openPanel(clases[0].g)}><Icon name="check" size={15} className="btn-ico" />Pasar lista</button>
+      </PageHead>
+
+      <div className="seg" style={{ marginBottom: 14 }}>
+        {['Todos', 'Preescolar', 'Primaria', 'Secundaria'].map(n => (
+          <button key={n} className={nivelFilter === n ? 'active' : ''} onClick={() => setNivelFilter(n)}>
+            {n}<span className="faint" style={{ marginLeft: 6, fontSize: 11 }}>{(n === 'Todos' ? allClases : allClases.filter(c => c.nivel === n)).length}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="kpi-row" style={{ gridTemplateColumns: 'repeat(4,1fr)' }}>
+        {kpis.map((k, i) => { const t = window.TONE[k.tone]; return <div className="card kpi" key={i}><div className="kpi-ico" style={{ background: t.bg, color: t.c }}><Icon name={k.icon} size={19} /></div><div className="kpi-label">{k.label}</div><div className="kpi-value tnum">{k.value}</div></div>; })}
+      </div>
+
+      {/* gráficas */}
+      <div className="grid mt-16" style={{ gridTemplateColumns: '1.5fr 1fr', alignItems: 'stretch' }}>
+        <div className="card pad">
+          <CardHead icon="trendUp" title="Tendencia de asistencia" sub="Últimos 10 días hábiles" />
+          <div style={{ marginTop: 6 }}><AreaChart series={[{ name: 'Asistencia', data: trend }]} labels={days.map(asDayShort)} height={210} max={100} /></div>
+        </div>
+        <div className="card pad">
+          <CardHead icon="pie" title="Hoy" sub="Distribución del día" />
+          {donutSegs.length ? (
+            <div className="row center" style={{ gap: 16, marginTop: 8 }}>
+              <Donut segments={donutSegs} size={124} thickness={16} center={<div style={{ textAlign: 'center' }}><div className="font-display" style={{ fontSize: 22, fontWeight: 600 }}>{ov.pct}%</div><div className="faint" style={{ fontSize: 10 }}>asistencia</div></div>} />
+              <div className="col gap-8" style={{ flex: 1 }}>
+                {donutSegs.map(s => <div key={s.label} className="row center gap-8"><span style={{ width: 9, height: 9, borderRadius: 3, background: s.color, flexShrink: 0 }} /><span className="grow" style={{ fontSize: 12.5 }}>{s.label}</span><span className="tnum font-mono" style={{ fontSize: 12.5, fontWeight: 600 }}>{s.value}</span></div>)}
+              </div>
+            </div>
+          ) : <div className="faint" style={{ fontSize: 13, padding: '20px 0' }}>Sin datos.</div>}
+        </div>
+      </div>
+
+      {/* grupos + riesgo/IA */}
+      <div className="grid mt-16" style={{ gridTemplateColumns: '1.5fr 1fr', alignItems: 'start' }}>
+        <div className="card">
+          <CardHead icon="users" title="Grupos" sub="Asistencia de hoy · clic para pasar lista" />
+          <div style={{ overflowX: 'auto' }}>
+            <table className="tbl">
+              <thead><tr><th>Grupo</th><th>Nivel</th><th>Titular</th><th>Asistencia</th><th className="num">Ausentes</th><th></th></tr></thead>
+              <tbody>
+                {ov.porGrupo.map(g => {
+                  const cfg = window.nivelCfg ? nivelCfg(g.clase.nivel) : { tone: 'blue' };
+                  return (
+                    <tr key={g.clase._id} style={{ cursor: 'pointer' }} onClick={() => openPanel(g.clase.g)}>
+                      <td style={{ fontWeight: 600 }}><span className="font-mono">{asShortGroup(g.clase.g)}</span></td>
+                      <td><Badge tone={cfg.tone}>{g.clase.nivel}</Badge></td>
+                      <td className="muted" style={{ fontSize: 12.5 }}>{g.clase.titular}</td>
+                      <td><div className="row center gap-8"><div style={{ width: 60 }}><Bar value={g.pct} height={6} color={g.pct >= 90 ? 'var(--green)' : g.pct >= 80 ? 'var(--amber)' : 'var(--red)'} /></div><AsPct pct={g.pct} /></div></td>
+                      <td className="num"><span className="tnum font-mono" style={{ fontWeight: 700, color: g.ausente ? 'var(--red)' : 'var(--text-faint)' }}>{g.ausente || '—'}</span></td>
+                      <td onClick={e => e.stopPropagation()}><button className="btn sm" onClick={() => openPanel(g.clase.g)}><Icon name="check" size={13} className="btn-ico" />Pasar lista</button></td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="col gap-16">
+          <div className="card">
+            <CardHead icon="alert" title="Ausentismo a vigilar" sub={risk.length + ' alumno(s) bajo 90% de asistencia'} />
+            {risk.length ? (
+              <div>
+                {risk.slice(0, 6).map(r => (
+                  <button key={r.group + r.name} className="lrow clickable" onClick={() => openStudent(r.name, r.group)} style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}>
+                    <Avatar name={r.name} size={32} />
+                    <div className="grow" style={{ minWidth: 0 }}><div style={{ fontWeight: 600, fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</div><div className="faint" style={{ fontSize: 11.5 }}>{asShortGroup(r.group)} · {r.ausente} faltas</div></div>
+                    <Badge tone={r.pct < 80 ? 'red' : 'amber'}>{r.pct}%</Badge>
+                  </button>
+                ))}
+              </div>
+            ) : <div className="faint" style={{ fontSize: 13, padding: '16px 20px' }}>Ningún alumno en riesgo de ausentismo. 🎉</div>}
+          </div>
+
+          <div className="ai-panel">
+            <div className="ai-panel-head">
+              <div className="ai-orb"><Icon name="spark" size={16} fill="currentColor" /></div>
+              <div className="grow"><div style={{ fontWeight: 600, fontSize: 14 }}>Análisis de asistencia</div><div className="faint" style={{ fontSize: 11.5 }}>{scopeLabel} · {asDateLabel(ov.date)}</div></div>
+            </div>
+            <div className="col gap-12" style={{ padding: '12px 2px 2px' }}>
+              {analysis ? (
+                <div className="card pad" style={{ background: 'var(--surface)', boxShadow: 'none' }}>
+                  <div style={{ fontSize: 13, lineHeight: 1.6 }}>{analysis.text}</div>
+                  <div className="row center gap-6" style={{ marginTop: 10 }}>
+                    <Badge tone={analysis.ia ? 'violet' : 'gray'} dot>{analysis.ia ? 'Análisis con IA' : 'Análisis calculado'}</Badge>
+                    <button className="chip-btn plain" style={{ fontSize: 11 }} onClick={analyze}>Regenerar</button>
+                  </div>
+                  {risk.length > 0 && (
+                    <div className="row gap-8 wrap" style={{ marginTop: 10 }}>
+                      <button className="chip-btn" onClick={() => { Store.log('Copilot', 'notificó a ' + risk.length + ' familia(s) por ausentismo', 'megaphone'); toast('Aviso enviado a ' + risk.length + ' familia(s) ✓'); }}>Avisar a familias</button>
+                      <button className="chip-btn" onClick={() => toast('Plan de seguimiento creado para ' + risk.length + ' alumno(s) ✓')}>Plan de seguimiento</button>
+                    </div>
+                  )}
+                </div>
+              ) : analyzing ? (
+                <div className="row center" style={{ gap: 9, padding: '8px 2px' }}><span className="ai-orb" style={{ width: 18, height: 18, borderRadius: 6 }}><Icon name="spark" size={10} fill="currentColor" /></span><span style={{ fontSize: 12.5 }}>Analizando asistencia…</span></div>
+              ) : (
+                <>
+                  <div className="faint" style={{ fontSize: 12.5, lineHeight: 1.5 }}>Detecta ausentismo crónico y prioriza a qué familias contactar.</div>
+                  <button className="btn primary" style={{ justifyContent: 'center' }} onClick={analyze}><Icon name="spark" size={15} className="btn-ico" fill="currentColor" />Analizar con IA</button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ====================================================================
+   wrapper con estado compartido (edits/justificantes) + routing interno
+   ==================================================================== */
+function Asistencia({ go }) {
+  const store = useStore();
+  const [nivelFilter, setNivelFilter] = React.useState('Todos');
+  const [edits, setEdits] = React.useState(asLoadEdits);
+  const [just, setJustState] = React.useState(asLoadJust);
+  const [panel, setPanel] = React.useState(null);
+  const [student, setStudent] = React.useState(null);
+
+  function setStatus(date, group, name, val) { const k = asCellKey(date, group, name); setEdits(prev => { const ne = { ...prev, [k]: val }; asSaveEdits(ne); return ne; }); }
+  function setJust(date, group, name, obj) { const k = asCellKey(date, group, name); setJustState(prev => { const nj = { ...prev, [k]: obj }; asSaveJust(nj); return nj; }); }
+  function openStudent(name, group) { setPanel(null); setStudent({ name, group }); const el = document.querySelector('.content'); if (el) el.scrollTop = 0; }
+
+  if (student) return <AsStudentDetail name={student.name} group={student.group} edits={edits} just={just} setStatus={setStatus} setJust={setJust} onBack={() => setStudent(null)} />;
+
+  return (
+    <>
+      <AsDashboard nivelFilter={nivelFilter} setNivelFilter={setNivelFilter} edits={edits} openPanel={g => setPanel(g)} openStudent={openStudent} />
+      {panel && <AsPanel group={panel} edits={edits} just={just} setStatus={setStatus} setJust={setJust} onClose={() => setPanel(null)} openStudent={openStudent} />}
+    </>
+  );
+}
+
+Object.assign(window, { Asistencia });

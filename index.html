@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Colegio Jean Piaget · Evolución</title>
+<meta name="description" content="Colegio Jean Piaget — educación integral, humanista y constructivista desde Preescolar hasta Preparatoria. Más de 35 años formando." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --font-ui: 'Hanken Grotesk', system-ui, sans-serif;
+  --font-display: 'Space Grotesk', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  --bg: oklch(0.985 0.004 255);
+  --surface: #ffffff;
+  --surface-2: oklch(0.978 0.005 255);
+  --surface-3: oklch(0.965 0.006 255);
+  --border: oklch(0.925 0.006 258);
+  --border-strong: oklch(0.875 0.008 258);
+
+  --text: oklch(0.24 0.022 264);
+  --text-muted: oklch(0.53 0.02 264);
+  --text-faint: oklch(0.66 0.015 264);
+
+  --accent-h: 262;
+  --accent: oklch(0.55 0.185 var(--accent-h));
+  --accent-strong: oklch(0.47 0.2 var(--accent-h));
+  --accent-soft: oklch(0.955 0.035 var(--accent-h));
+  --accent-soft-2: oklch(0.92 0.06 var(--accent-h));
+  --on-accent: #ffffff;
+
+  --r: 16px;
+  --r-sm: 10px;
+  --r-lg: 22px;
+  --r-pill: 999px;
+
+  --shadow-xs: 0 1px 2px rgba(18, 28, 56, 0.05);
+  --shadow-sm: 0 2px 6px -2px rgba(18, 28, 56, 0.08), 0 1px 2px rgba(18, 28, 56, 0.04);
+  --shadow: 0 10px 30px -12px rgba(18, 28, 56, 0.16), 0 2px 6px -2px rgba(18, 28, 56, 0.06);
+  --shadow-lg: 0 24px 60px -20px rgba(18, 28, 56, 0.28), 0 6px 16px -8px rgba(18, 28, 56, 0.10);
+
+  --maxw: 1180px;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+::selection { background: var(--accent-soft-2); }
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; cursor: pointer; }
+input { font-family: inherit; }
+img { max-width: 100%; display: block; }
+
+.wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 28px; }
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent-strong);
+  font-weight: 500;
+}
+
+/* ===== Botones ===== */
+.btn {
+  display: inline-flex; align-items: center; gap: 9px;
+  height: 46px; padding: 0 22px;
+  border-radius: var(--r-pill);
+  font-size: 15px; font-weight: 600;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+  box-shadow: var(--shadow-xs);
+}
+.btn:hover { border-color: var(--text-faint); background: var(--surface-2); }
+.btn:active { transform: translateY(1px); }
+.btn.primary {
+  background: var(--accent); border-color: var(--accent); color: var(--on-accent);
+  box-shadow: 0 10px 24px -10px color-mix(in oklch, var(--accent), transparent 45%);
+}
+.btn.primary:hover { background: var(--accent-strong); border-color: var(--accent-strong); }
+.btn.sm { height: 40px; padding: 0 17px; font-size: 14px; }
+.btn .arr { transition: transform 0.18s; }
+.btn:hover .arr { transform: translateX(3px); }
+
+/* ===== Nav ===== */
+.nav {
+  position: sticky; top: 0; z-index: 50;
+  background: color-mix(in oklch, var(--bg), transparent 12%);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.2s, background 0.2s;
+}
+.nav.scrolled { border-bottom-color: var(--border); }
+.nav-inner { display: flex; align-items: center; gap: 30px; height: 76px; }
+.brand { display: flex; align-items: center; gap: 12px; }
+.brand-mark {
+  width: 40px; height: 40px; border-radius: 12px;
+  background: var(--accent); color: var(--on-accent);
+  display: grid; place-items: center;
+  font-family: var(--font-display); font-weight: 700; font-size: 17px; letter-spacing: -0.02em;
+  box-shadow: 0 6px 16px -5px color-mix(in oklch, var(--accent), transparent 50%);
+}
+.brand-text { line-height: 1.05; }
+.brand-name { font-family: var(--font-display); font-weight: 600; font-size: 18px; letter-spacing: -0.01em; }
+.brand-sub { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-faint); margin-top: 2px; }
+.nav-links { display: flex; align-items: center; gap: 4px; margin-left: 10px; }
+.nav-links a {
+  padding: 9px 14px; border-radius: var(--r-pill);
+  font-size: 14.5px; font-weight: 500; color: var(--text-muted);
+  transition: background 0.14s, color 0.14s;
+}
+.nav-links a:hover { background: var(--surface-2); color: var(--text); }
+.nav-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+
+/* ===== Hero ===== */
+.hero { padding: 86px 0 92px; position: relative; overflow: hidden; }
+.hero::before {
+  content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background: radial-gradient(60% 70% at 78% 8%, var(--accent-soft) 0%, transparent 60%);
+}
+.hero-grid {
+  position: relative; z-index: 1;
+  display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 56px; align-items: center;
+}
+.hero-eyebrow { display: inline-flex; align-items: center; gap: 9px; margin-bottom: 22px; }
+.hero-eyebrow .dot { width: 7px; height: 7px; border-radius: 999px; background: var(--accent); }
+.hero h1 {
+  font-family: var(--font-display);
+  font-size: clamp(56px, 9vw, 104px);
+  font-weight: 700; letter-spacing: -0.04em; line-height: 0.94;
+  margin: 0 0 24px;
+}
+.hero h1 .em { color: var(--accent); }
+.hero-lead { font-size: 18.5px; color: var(--text-muted); max-width: 46ch; margin: 0 0 16px; text-wrap: pretty; }
+.hero-lead b { color: var(--text); font-weight: 600; }
+.hero-cta { display: flex; flex-wrap: wrap; gap: 13px; margin-top: 30px; }
+
+.hero-visual { position: relative; }
+.ph {
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background:
+    repeating-linear-gradient(135deg, var(--surface-2) 0 11px, var(--surface) 11px 22px);
+  display: grid; place-items: center;
+  color: var(--text-faint);
+  font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.05em;
+  box-shadow: var(--shadow);
+  position: relative; overflow: hidden;
+}
+.ph .ph-tag {
+  position: absolute; bottom: 14px; left: 14px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-pill); padding: 5px 12px;
+  color: var(--text-muted); box-shadow: var(--shadow-xs);
+}
+.hero-visual .ph { aspect-ratio: 4 / 5; }
+.hero-float {
+  position: absolute; left: -34px; bottom: 40px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r); box-shadow: var(--shadow);
+  padding: 14px 17px; display: flex; align-items: center; gap: 13px;
+  max-width: 260px;
+}
+.hero-float .hf-mark { width: 38px; height: 38px; border-radius: 11px; background: var(--accent-soft); color: var(--accent-strong); display: grid; place-items: center; flex-shrink: 0; }
+.hero-float .hf-t { font-weight: 700; font-size: 14px; }
+.hero-float .hf-s { font-size: 12.5px; color: var(--text-faint); }
+
+/* ===== Stats ===== */
+.stats { border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); background: var(--surface); }
+.stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); }
+.stat { padding: 32px 28px; border-left: 1px solid var(--border); }
+.stat:first-child { border-left: none; }
+.stat .sv { font-family: var(--font-display); font-size: 42px; font-weight: 600; letter-spacing: -0.03em; line-height: 1; }
+.stat .sl { color: var(--text-muted); font-size: 14.5px; margin-top: 9px; }
+
+/* ===== Section scaffolding ===== */
+section { scroll-margin-top: 90px; }
+.sec { padding: 96px 0; }
+.sec-head { max-width: 640px; margin-bottom: 48px; }
+.sec-head.center { margin-left: auto; margin-right: auto; text-align: center; }
+.sec-head h2 {
+  font-family: var(--font-display);
+  font-size: clamp(32px, 4.4vw, 46px);
+  font-weight: 600; letter-spacing: -0.025em; line-height: 1.06;
+  margin: 16px 0 0;
+}
+.sec-head p { color: var(--text-muted); font-size: 17px; margin: 16px 0 0; text-wrap: pretty; }
+
+/* ===== Niveles ===== */
+.niveles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+.nivel {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-lg); padding: 30px 30px 26px;
+  position: relative; overflow: hidden;
+  transition: border-color 0.16s, box-shadow 0.16s, transform 0.16s;
+}
+.nivel:hover { border-color: var(--border-strong); box-shadow: var(--shadow); transform: translateY(-3px); }
+.nivel-n { font-family: var(--font-mono); font-size: 12px; color: var(--text-faint); letter-spacing: 0.08em; }
+.nivel h3 { font-family: var(--font-display); font-size: 23px; font-weight: 600; letter-spacing: -0.01em; margin: 14px 0 10px; }
+.nivel p { color: var(--text-muted); font-size: 15px; margin: 0 0 18px; text-wrap: pretty; }
+.nivel .ages { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; color: var(--accent-strong); background: var(--accent-soft); border-radius: var(--r-pill); padding: 5px 12px; }
+.nivel .ribbon { position: absolute; top: 0; right: 0; width: 64px; height: 64px; background: radial-gradient(120% 120% at 100% 0%, var(--accent-soft) 0%, transparent 70%); }
+
+/* ===== Filosofía ===== */
+.filo { background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.filo-grid { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: 60px; align-items: center; }
+.filo-visual .ph { aspect-ratio: 1 / 1; }
+.values { display: grid; gap: 8px; margin-top: 32px; }
+.value { display: flex; gap: 16px; padding: 18px; border-radius: var(--r); transition: background 0.14s; }
+.value:hover { background: var(--surface-2); }
+.value .vmark { width: 42px; height: 42px; border-radius: 12px; background: var(--accent-soft); color: var(--accent-strong); display: grid; place-items: center; flex-shrink: 0; font-family: var(--font-display); font-weight: 700; }
+.value h4 { margin: 2px 0 4px; font-size: 16.5px; font-weight: 700; }
+.value p { margin: 0; color: var(--text-muted); font-size: 14.5px; }
+
+/* ===== Plataforma ===== */
+.plat { position: relative; }
+.plat-card {
+  background: oklch(0.21 0.018 264);
+  color: oklch(0.96 0.006 264);
+  border-radius: 28px;
+  padding: 64px 56px;
+  position: relative; overflow: hidden;
+  box-shadow: var(--shadow-lg);
+}
+.plat-card::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(70% 90% at 88% 0%, color-mix(in oklch, var(--accent), transparent 55%) 0%, transparent 55%);
+}
+.plat-grid { position: relative; z-index: 1; display: grid; grid-template-columns: 1fr 0.85fr; gap: 52px; align-items: center; }
+.plat .eyebrow { color: color-mix(in oklch, var(--accent), white 30%); }
+.plat h2 { font-family: var(--font-display); font-size: clamp(30px, 3.6vw, 40px); font-weight: 600; letter-spacing: -0.025em; line-height: 1.08; margin: 16px 0 18px; }
+.plat-lead { color: oklch(0.78 0.014 264); font-size: 16.5px; max-width: 44ch; margin: 0; }
+.plat-feats { list-style: none; padding: 0; margin: 26px 0 0; display: grid; gap: 13px; }
+.plat-feats li { display: flex; align-items: center; gap: 12px; font-size: 15px; color: oklch(0.86 0.01 264); }
+.plat-feats .ck { width: 22px; height: 22px; border-radius: 7px; background: color-mix(in oklch, var(--accent), transparent 65%); color: oklch(0.92 0.05 var(--accent-h)); display: grid; place-items: center; flex-shrink: 0; }
+
+/* login mini-card inside plataforma */
+.plat-login {
+  background: var(--surface); color: var(--text);
+  border-radius: var(--r-lg); padding: 30px;
+  box-shadow: var(--shadow-lg);
+}
+.plat-login h3 { font-family: var(--font-display); font-size: 21px; font-weight: 600; letter-spacing: -0.01em; margin: 0 0 4px; }
+.plat-login .pl-sub { color: var(--text-muted); font-size: 14px; margin: 0 0 22px; }
+.roles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 18px; }
+.role-tile {
+  border: 1.5px solid var(--border); background: var(--surface); border-radius: 12px;
+  padding: 12px 8px; text-align: center; font-size: 12.5px; font-weight: 600; color: var(--text-muted);
+  transition: border-color 0.14s, background 0.14s, color 0.14s;
+}
+.role-tile .ri { display: block; margin: 0 auto 7px; color: var(--text-faint); }
+.role-tile:hover { background: var(--surface-2); }
+.role-tile.sel { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-strong); }
+.role-tile.sel .ri { color: var(--accent); }
+
+/* ===== Form fields (shared) ===== */
+.field { display: flex; flex-direction: column; gap: 7px; margin-bottom: 14px; }
+.field label { font-size: 13px; font-weight: 600; color: var(--text-muted); }
+.inp {
+  height: 46px; padding: 0 15px; border-radius: 12px;
+  border: 1px solid var(--border-strong); background: var(--surface-2);
+  font-size: 15px; color: var(--text); outline: none;
+  transition: border-color 0.14s, background 0.14s, box-shadow 0.14s;
+  width: 100%;
+}
+.inp:focus { border-color: var(--accent); background: var(--surface); box-shadow: 0 0 0 4px var(--accent-soft); }
+.inp-row { position: relative; }
+.inp-row .toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-faint); font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em; }
+.form-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 2px 0 18px; font-size: 13.5px; }
+.check { display: inline-flex; align-items: center; gap: 8px; color: var(--text-muted); cursor: pointer; user-select: none; }
+.check input { width: 16px; height: 16px; accent-color: var(--accent); }
+.link { color: var(--accent-strong); font-weight: 600; }
+.link:hover { text-decoration: underline; }
+.full { width: 100%; justify-content: center; }
+.login-err {
+  display: none; align-items: center; gap: 9px;
+  background: oklch(0.96 0.04 27); border: 1px solid oklch(0.85 0.09 27);
+  color: oklch(0.48 0.14 27); border-radius: 12px;
+  padding: 11px 14px; font-size: 13.5px; font-weight: 500;
+  margin-bottom: 14px; text-wrap: pretty;
+}
+.login-err::before { content: '!'; flex-shrink: 0; width: 18px; height: 18px; border-radius: 999px; background: oklch(0.55 0.18 27); color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 12px; }
+
+/* ===== Footer ===== */
+.foot { background: var(--surface); border-top: 1px solid var(--border); padding: 64px 0 30px; }
+.foot-grid { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1.2fr; gap: 40px; }
+.foot h5 { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-faint); margin: 0 0 16px; font-weight: 500; }
+.foot ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 11px; }
+.foot a, .foot li { color: var(--text-muted); font-size: 14.5px; }
+.foot a:hover { color: var(--text); }
+.foot-about p { color: var(--text-muted); font-size: 14.5px; margin: 16px 0 0; max-width: 30ch; }
+.socials { display: flex; gap: 9px; margin-top: 18px; }
+.soc { width: 38px; height: 38px; border-radius: 11px; border: 1px solid var(--border); display: grid; place-items: center; color: var(--text-muted); transition: border-color 0.14s, color 0.14s, background 0.14s; }
+.soc:hover { border-color: var(--accent); color: var(--accent-strong); background: var(--accent-soft); }
+.foot-bottom { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 48px; padding-top: 22px; border-top: 1px solid var(--border); color: var(--text-faint); font-size: 13px; flex-wrap: wrap; }
+
+/* ===== Login modal ===== */
+.scrim {
+  position: fixed; inset: 0; z-index: 100;
+  background: oklch(0.22 0.02 264 / 0.42); backdrop-filter: blur(4px);
+  display: grid; place-items: center; padding: 24px;
+  opacity: 0; pointer-events: none; transition: opacity 0.22s ease;
+}
+.scrim.open { opacity: 1; pointer-events: auto; }
+.modal {
+  width: 920px; max-width: 100%; max-height: 92vh;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 24px; box-shadow: var(--shadow-lg); overflow: hidden;
+  display: grid; grid-template-columns: 0.85fr 1fr;
+  transform: translateY(14px) scale(0.985); transition: transform 0.26s cubic-bezier(.2,.7,.2,1);
+}
+.scrim.open .modal { transform: none; }
+.modal-aside {
+  background: oklch(0.21 0.018 264); color: oklch(0.96 0.006 264);
+  padding: 40px 36px; position: relative; overflow: hidden;
+  display: flex; flex-direction: column;
+}
+.modal-aside::before { content: ''; position: absolute; inset: 0; background: radial-gradient(75% 60% at 15% 100%, color-mix(in oklch, var(--accent), transparent 50%) 0%, transparent 60%); }
+.modal-aside > * { position: relative; z-index: 1; }
+.modal-aside .brand-mark { background: var(--accent); }
+.modal-aside h3 { font-family: var(--font-display); font-size: 26px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.1; margin: auto 0 12px; }
+.modal-aside p { color: oklch(0.8 0.012 264); font-size: 14.5px; margin: 0; }
+.aside-note { margin-top: 24px; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.05em; color: oklch(0.68 0.014 264); display: flex; align-items: center; gap: 8px; }
+.aside-note .d { width: 7px; height: 7px; border-radius: 999px; background: var(--accent); }
+.modal-form { padding: 38px 38px 34px; overflow-y: auto; }
+.modal-form .mf-head { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 22px; }
+.modal-form h2 { font-family: var(--font-display); font-size: 24px; font-weight: 600; letter-spacing: -0.02em; margin: 0; }
+.modal-form .mf-sub { color: var(--text-muted); font-size: 14px; margin: 5px 0 0; }
+.close-x { width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text-muted); display: grid; place-items: center; flex-shrink: 0; transition: background 0.14s, color 0.14s; }
+.close-x:hover { background: var(--surface-2); color: var(--text); }
+
+.icon { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+@media (max-width: 900px) {
+  .hero-grid { grid-template-columns: 1fr; gap: 40px; }
+  .hero-visual { max-width: 460px; }
+  .filo-grid, .plat-grid { grid-template-columns: 1fr; gap: 36px; }
+  .niveles { grid-template-columns: 1fr; }
+  .foot-grid { grid-template-columns: 1fr 1fr; gap: 32px; }
+  .modal { grid-template-columns: 1fr; }
+  .modal-aside { display: none; }
+  .nav-links { display: none; }
+}
+@media (max-width: 560px) {
+  .wrap { padding: 0 18px; }
+  .stats-grid { grid-template-columns: 1fr; }
+  .stat { border-left: none; border-top: 1px solid var(--border); }
+  .stat:first-child { border-top: none; }
+  .roles { grid-template-columns: 1fr; }
+  .foot-grid { grid-template-columns: 1fr; }
+  .plat-card { padding: 40px 26px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ===== NAV ===== -->
+<nav class="nav" id="nav">
+  <div class="wrap nav-inner">
+    <a class="brand" href="#top">
+      <div class="brand-mark">JP</div>
+      <div class="brand-text">
+        <div class="brand-name">Jean Piaget</div>
+        <div class="brand-sub">Colegio · Evolución</div>
+      </div>
+    </a>
+    <div class="nav-links">
+      <a href="#colegio">Colegio</a>
+      <a href="#niveles">Niveles</a>
+      <a href="#filosofia">Filosofía</a>
+      <a href="#plataforma">Plataforma</a>
+      <a href="#contacto">Contacto</a>
+    </div>
+    <div class="nav-right">
+      <button class="btn sm" onclick="openLogin()">Iniciar sesión</button>
+      <a class="btn sm primary" href="#contacto">Admisiones</a>
+    </div>
+  </div>
+</nav>
+
+<span id="top"></span>
+
+<!-- ===== HERO ===== -->
+<header class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <div class="hero-eyebrow eyebrow"><span class="dot"></span> Más de 35 años formando</div>
+      <h1>EVO<span class="em">LUCIÓN</span></h1>
+      <p class="hero-lead">En el Colegio Jean Piaget ayudamos a cada estudiante a desarrollar todo su potencial: inspiramos el amor por el aprendizaje, la <b>imaginación</b>, la <b>creatividad</b> y el <b>pensamiento crítico</b>.</p>
+      <p class="hero-lead">Educación integral, humanista y constructivista, desde Preescolar hasta Preparatoria.</p>
+      <div class="hero-cta">
+        <a class="btn primary" href="#niveles">Descubre el colegio <span class="arr">→</span></a>
+        <button class="btn" onclick="openLogin()">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></svg>
+          Acceder a la plataforma
+        </button>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div class="ph">[ campus · vida escolar ]<span class="ph-tag">reemplazar con foto del colegio</span></div>
+      <div class="hero-float">
+        <div class="hf-mark">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M22 10v6"/><path d="M6 12.5V17c0 1 3 3 6 3s6-2 6-3v-4.5"/><path d="M12 4 1 9l11 5 11-5-11-5Z"/></svg>
+        </div>
+        <div>
+          <div class="hf-t">Modelo constructivista</div>
+          <div class="hf-s">Aprendizaje por proyectos</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ===== STATS ===== -->
+<section class="stats" id="colegio">
+  <div class="wrap stats-grid">
+    <div class="stat">
+      <div class="sv">+35</div>
+      <div class="sl">Años de trayectoria educativa</div>
+    </div>
+    <div class="stat">
+      <div class="sv">4</div>
+      <div class="sl">Niveles: de Preescolar a Preparatoria</div>
+    </div>
+    <div class="stat">
+      <div class="sv">1</div>
+      <div class="sl">Plataforma para toda la comunidad</div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== MÉTODO ===== -->
+<section class="sec">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">Un método basado en resultados</div>
+      <h2>Una institución educativa con más de 35 años de experiencia.</h2>
+      <p>Ofrecemos una educación integral que prepara a nuestros estudiantes para enfrentar los desafíos del mundo real. Conoce nuestras características distintivas y descubre cómo podemos acompañarte.</p>
+    </div>
+  </div>
+  <!-- niveles -->
+  <div class="wrap" id="niveles">
+    <div class="niveles">
+      <article class="nivel">
+        <span class="ribbon"></span>
+        <div class="nivel-n">01</div>
+        <h3>Preescolar</h3>
+        <p>Aprendizaje experiencial: los niños participan en proyectos temáticos interdisciplinarios que fomentan la imaginación, la creatividad, la resolución de problemas y el trabajo en equipo desde temprana edad.</p>
+        <span class="ages">3 – 5 años</span>
+      </article>
+      <article class="nivel">
+        <span class="ribbon"></span>
+        <div class="nivel-n">02</div>
+        <h3>Primaria</h3>
+        <p>Tecnología integrada de forma significativa, educación personalizada según las habilidades de cada alumno y enseñanza basada en proyectos para desarrollar habilidades prácticas y creatividad.</p>
+        <span class="ages">6 – 12 años</span>
+      </article>
+      <article class="nivel">
+        <span class="ribbon"></span>
+        <div class="nivel-n">03</div>
+        <h3>Secundaria</h3>
+        <p>Desarrollo integral: cultivamos habilidades emocionales, sociales y éticas junto al conocimiento académico, fomentando la autoexpresión y la participación activa en la comunidad.</p>
+        <span class="ages">12 – 15 años</span>
+      </article>
+      <article class="nivel">
+        <span class="ribbon"></span>
+        <div class="nivel-n">04</div>
+        <h3>Preparatoria</h3>
+        <p>Acompañamos a los estudiantes hacia la educación superior con pensamiento crítico, autonomía y un proyecto de vida que les permita contribuir significativamente a la sociedad.</p>
+        <span class="ages">15 – 18 años</span>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FILOSOFÍA ===== -->
+<section class="filo" id="filosofia">
+  <div class="wrap sec" style="padding-top:88px;padding-bottom:88px;">
+    <div class="filo-grid">
+      <div class="filo-visual">
+        <div class="ph">[ estudiantes en proyecto ]<span class="ph-tag">reemplazar con foto del aula</span></div>
+      </div>
+      <div>
+        <div class="eyebrow">Nuestra filosofía</div>
+        <h2 style="font-family:var(--font-display);font-size:clamp(30px,4vw,42px);font-weight:600;letter-spacing:-0.025em;line-height:1.08;margin:16px 0 0;">La educación evoluciona cuando el alumno construye su propio conocimiento.</h2>
+        <div class="values">
+          <div class="value">
+            <div class="vmark">C</div>
+            <div><h4>Constructivista</h4><p>El conocimiento se construye activamente; el alumno es protagonista de su aprendizaje.</p></div>
+          </div>
+          <div class="value">
+            <div class="vmark">H</div>
+            <div><h4>Humanista</h4><p>Formamos personas conscientes de su entorno, con valores y sensibilidad social.</p></div>
+          </div>
+          <div class="value">
+            <div class="vmark">P</div>
+            <div><h4>Basada en proyectos</h4><p>Aprender haciendo: retos reales que desarrollan habilidades prácticas y creatividad.</p></div>
+          </div>
+          <div class="value">
+            <div class="vmark">+</div>
+            <div><h4>Personalizada</h4><p>El plan de estudio se adapta a las habilidades individuales de cada estudiante.</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== PLATAFORMA + LOGIN ===== -->
+<section class="sec plat" id="plataforma">
+  <div class="wrap">
+    <div class="plat-card">
+      <div class="plat-grid">
+        <div>
+          <div class="eyebrow">Plataforma Jean Piaget</div>
+          <h2>Toda la vida escolar, en un solo lugar.</h2>
+          <p class="plat-lead">Calificaciones, asistencia, pagos, comunicación y más — para dirección, docentes y familias. Accede con tu cuenta institucional.</p>
+          <ul class="plat-feats">
+            <li><span class="ck"><svg class="icon" viewBox="0 0 24 24" style="width:13px;height:13px;"><path d="M20 6 9 17l-5-5"/></svg></span> Calificaciones y boletines en tiempo real</li>
+            <li><span class="ck"><svg class="icon" viewBox="0 0 24 24" style="width:13px;height:13px;"><path d="M20 6 9 17l-5-5"/></svg></span> Pagos y estados de cuenta en línea</li>
+            <li><span class="ck"><svg class="icon" viewBox="0 0 24 24" style="width:13px;height:13px;"><path d="M20 6 9 17l-5-5"/></svg></span> Comunicación directa escuela–familia</li>
+          </ul>
+        </div>
+        <div class="plat-login">
+          <h3>Entrar a la plataforma</h3>
+          <p class="pl-sub">Selecciona tu perfil para continuar.</p>
+          <div class="roles" id="rolesInline">
+            <button class="role-tile sel" data-role="Familia" onclick="pickRole(this,'rolesInline')">
+              <svg class="icon ri" viewBox="0 0 24 24"><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M21 21v-2a4 4 0 0 0-3-3.87"/></svg>
+              Familia
+            </button>
+            <button class="role-tile" data-role="Estudiante" onclick="pickRole(this,'rolesInline')">
+              <svg class="icon ri" viewBox="0 0 24 24"><path d="m12 3 9 4-9 4-9-4 9-4Z"/><path d="M21 10v6"/><path d="M6 12v5c0 1 2.7 2.5 6 2.5s6-1.5 6-2.5v-5"/></svg>
+              Estudiante
+            </button>
+            <button class="role-tile" data-role="Docente" onclick="pickRole(this,'rolesInline')">
+              <svg class="icon ri" viewBox="0 0 24 24"><path d="M2 3h20v14H2z"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>
+              Docente
+            </button>
+            <button class="role-tile" data-role="Dirección" onclick="pickRole(this,'rolesInline')">
+              <svg class="icon ri" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              Dirección
+            </button>
+          </div>
+          <form onsubmit="return doLogin(event)">
+            <div class="field">
+              <label>Correo institucional</label>
+              <input class="inp" type="email" placeholder="nombre@jeanpiaget.mx" required />
+            </div>
+            <div class="field">
+              <label>Contraseña</label>
+              <div class="inp-row">
+                <input class="inp" type="password" id="pwInline" placeholder="••••••••" required />
+                <button type="button" class="toggle" onclick="togglePw('pwInline',this)">VER</button>
+              </div>
+            </div>
+            <div class="form-row">
+              <label class="check"><input type="checkbox" checked /> Recordarme</label>
+              <a class="link" href="#" onclick="return false">¿Olvidaste tu contraseña?</a>
+            </div>
+            <button class="btn primary full" type="submit">Entrar →</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FOOTER ===== -->
+<footer class="foot" id="contacto">
+  <div class="wrap">
+    <div class="foot-grid">
+      <div class="foot-about">
+        <a class="brand" href="#top">
+          <div class="brand-mark">JP</div>
+          <div class="brand-text">
+            <div class="brand-name">Jean Piaget</div>
+            <div class="brand-sub">Colegio · Evolución</div>
+          </div>
+        </a>
+        <p>Educación integral, humanista y constructivista. Corporativo Jean Piaget S.C.</p>
+        <div class="socials">
+          <a class="soc" href="https://www.facebook.com/somospiaget" aria-label="Facebook" target="_blank" rel="noopener"><svg class="icon" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M22 12a10 10 0 1 0-11.56 9.88v-6.99H7.9V12h2.54V9.8c0-2.5 1.49-3.89 3.78-3.89 1.09 0 2.24.2 2.24.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56V12h2.78l-.44 2.89h-2.34v6.99A10 10 0 0 0 22 12Z"/></svg></a>
+          <a class="soc" href="https://www.instagram.com/soypiaget" aria-label="Instagram" target="_blank" rel="noopener"><svg class="icon" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="5.5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.5" cy="6.5" r="1.2" fill="currentColor" stroke="none"/></svg></a>
+          <a class="soc" href="https://www.youtube.com/user/cjpiaget" aria-label="YouTube" target="_blank" rel="noopener"><svg class="icon" viewBox="0 0 24 24"><path d="M22 12s0-3.2-.4-4.7a2.5 2.5 0 0 0-1.77-1.77C18.34 5.1 12 5.1 12 5.1s-6.34 0-7.83.43A2.5 2.5 0 0 0 2.4 7.3C2 8.8 2 12 2 12s0 3.2.4 4.7a2.5 2.5 0 0 0 1.77 1.77c1.49.43 7.83.43 7.83.43s6.34 0 7.83-.43a2.5 2.5 0 0 0 1.77-1.77C22 15.2 22 12 22 12Z"/><path d="m10 15 5-3-5-3v6Z" fill="currentColor" stroke="none"/></svg></a>
+          <a class="soc" href="https://www.twitter.com/somospiaget" aria-label="X" target="_blank" rel="noopener"><svg class="icon" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M18.24 2.25h3.31l-7.23 8.26 8.5 11.24h-6.66l-5.21-6.82-5.97 6.82H1.66l7.73-8.84L1.25 2.25h6.83l4.71 6.23 5.45-6.23Zm-1.16 17.52h1.83L7.01 4.13H5.04l12.04 15.64Z"/></svg></a>
+        </div>
+      </div>
+      <div>
+        <h5>Colegio</h5>
+        <ul>
+          <li><a href="#niveles">Preescolar</a></li>
+          <li><a href="#niveles">Primaria</a></li>
+          <li><a href="#niveles">Secundaria</a></li>
+          <li><a href="#niveles">Preparatoria</a></li>
+        </ul>
+      </div>
+      <div>
+        <h5>Comunidad</h5>
+        <ul>
+          <li><a href="#" onclick="openLogin();return false;">Plataforma</a></li>
+          <li><a href="#filosofia">Filosofía</a></li>
+          <li><a href="#contacto">Admisiones</a></li>
+          <li><a href="#contacto">Cafetería</a></li>
+        </ul>
+      </div>
+      <div>
+        <h5>Contacto</h5>
+        <ul>
+          <li>Jazmines 20, Granjas San Pablo,<br/>Tultitlán, Edo. de México, 54930</li>
+          <li><a href="mailto:hola@jeanpiaget.mx">hola@jeanpiaget.mx</a></li>
+          <li><a href="tel:+525575972971">55 7597 2971</a> · <a href="tel:+525575972972">2972</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© 2026 Corporativo Jean Piaget S.C. Todos los derechos reservados.</span>
+      <span class="eyebrow" style="color:var(--text-faint)">Soy Piaget</span>
+    </div>
+  </div>
+</footer>
+
+<!-- ===== LOGIN MODAL ===== -->
+<div class="scrim" id="loginScrim" onclick="if(event.target===this)closeLogin()">
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Iniciar sesión">
+    <aside class="modal-aside">
+      <div class="brand">
+        <div class="brand-mark">JP</div>
+        <div class="brand-text">
+          <div class="brand-name" style="color:#fff">Jean Piaget</div>
+          <div class="brand-sub">Plataforma</div>
+        </div>
+      </div>
+      <h3>Bienvenido de vuelta a la comunidad Piaget.</h3>
+      <p>Accede a calificaciones, pagos, asistencia y comunicación desde un solo lugar.</p>
+      <div class="aside-note"><span class="d"></span> Acceso seguro · cuenta institucional</div>
+    </aside>
+    <div class="modal-form">
+      <div class="mf-head">
+        <div>
+          <h2>Iniciar sesión</h2>
+          <p class="mf-sub">Ingresa con tu cuenta institucional.</p>
+        </div>
+        <button class="close-x" onclick="closeLogin()" aria-label="Cerrar">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="roles" id="rolesModal">
+        <button class="role-tile sel" data-role="Familia" onclick="pickRole(this,'rolesModal')">
+          <svg class="icon ri" viewBox="0 0 24 24"><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M21 21v-2a4 4 0 0 0-3-3.87"/></svg>
+          Familia
+        </button>
+        <button class="role-tile" data-role="Estudiante" onclick="pickRole(this,'rolesModal')">
+          <svg class="icon ri" viewBox="0 0 24 24"><path d="m12 3 9 4-9 4-9-4 9-4Z"/><path d="M21 10v6"/><path d="M6 12v5c0 1 2.7 2.5 6 2.5s6-1.5 6-2.5v-5"/></svg>
+          Estudiante
+        </button>
+        <button class="role-tile" data-role="Docente" onclick="pickRole(this,'rolesModal')">
+          <svg class="icon ri" viewBox="0 0 24 24"><path d="M2 3h20v14H2z"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>
+          Docente
+        </button>
+        <button class="role-tile" data-role="Dirección" onclick="pickRole(this,'rolesModal')">
+          <svg class="icon ri" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          Dirección
+        </button>
+      </div>
+      <form onsubmit="return doLogin(event)">
+        <div class="field">
+          <label>Correo institucional</label>
+          <input class="inp" type="email" placeholder="nombre@jeanpiaget.mx" required />
+        </div>
+        <div class="field">
+          <label>Contraseña</label>
+          <div class="inp-row">
+            <input class="inp" type="password" id="pwModal" placeholder="••••••••" required />
+            <button type="button" class="toggle" onclick="togglePw('pwModal',this)">VER</button>
+          </div>
+        </div>
+        <div class="form-row">
+          <label class="check"><input type="checkbox" checked /> Recordarme</label>
+          <a class="link" href="#" onclick="return false">¿Olvidaste tu contraseña?</a>
+        </div>
+        <button class="btn primary full" type="submit">Entrar a la plataforma →</button>
+        <p style="text-align:center;color:var(--text-faint);font-size:13px;margin:16px 0 0;">¿Sin cuenta? <a class="link" href="#contacto" onclick="closeLogin()">Solicita acceso en Admisiones</a></p>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Conexion / autenticacion real (compartida con la plataforma) -->
+<script src="config.js"></script>
+<script src="auth.jsx"></script>
+
+<script>
+  // nav shadow on scroll
+  const nav = document.getElementById('nav');
+  const onScroll = () => nav.classList.toggle('scrolled', window.scrollY > 8);
+  window.addEventListener('scroll', onScroll, { passive: true }); onScroll();
+
+  // login modal
+  const scrim = document.getElementById('loginScrim');
+  function openLogin() { scrim.classList.add('open'); document.body.style.overflow = 'hidden'; }
+  function closeLogin() { scrim.classList.remove('open'); document.body.style.overflow = ''; }
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLogin(); });
+
+  function pickRole(btn, group) {
+    document.querySelectorAll('#' + group + ' .role-tile').forEach(t => t.classList.remove('sel'));
+    btn.classList.add('sel');
+  }
+  function togglePw(id, btn) {
+    const f = document.getElementById(id);
+    const show = f.type === 'password';
+    f.type = show ? 'text' : 'password';
+    btn.textContent = show ? 'OCULTAR' : 'VER';
+  }
+  function setLoginError(form, msg) {
+    let el = form.querySelector('.login-err');
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'login-err';
+      const submit = form.querySelector('button[type="submit"]');
+      submit.parentNode.insertBefore(el, submit);
+    }
+    el.textContent = msg || '';
+    el.style.display = msg ? 'flex' : 'none';
+  }
+
+  async function doLogin(e) {
+    e.preventDefault();
+    const form = e.target;
+    const idEl = form.querySelector('input[type="email"]');
+    const passEl = form.querySelector('input[type="password"]') || form.querySelector('input:not([type="email"]):not([type="checkbox"])');
+    const id = idEl ? idEl.value.trim() : '';
+    const pass = passEl ? passEl.value : '';
+    const btn = form.querySelector('button[type="submit"]');
+    const A = window.PiagetAuth;
+
+    // MODO BACKEND (Supabase configurado): validamos AQUI contra las cuentas reales
+    // y solo entramos si las credenciales son correctas.
+    if (A && A.mode === 'backend') {
+      setLoginError(form, '');
+      if (btn) { btn.disabled = true; if (!btn.dataset.label) btn.dataset.label = btn.textContent; btn.textContent = 'Validando…'; }
+      try {
+        const res = await A.authenticate(id, pass);
+        if (res && res.ok) {
+          A.setSession(res.account);
+          window.location.href = 'plataforma.html';
+          return false;
+        }
+        setLoginError(form, (res && res.error) || 'Usuario o contraseña incorrectos.');
+      } catch (_) {
+        setLoginError(form, 'No se pudo conectar con el servidor. Intenta de nuevo.');
+      }
+      if (btn) { btn.disabled = false; btn.textContent = btn.dataset.label || 'Entrar →'; }
+      return false;
+    }
+
+    // MODO LOCAL (demo, sin Supabase): la plataforma valida al cargar.
+    try { sessionStorage.setItem('piaget_login', JSON.stringify({ id, pass })); } catch (_) {}
+    window.location.href = 'plataforma.html';
+    return false;
+  }
+</script>
+
+</body>
+</html>
