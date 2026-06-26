@@ -1,7 +1,7 @@
 // api/stripe-webhook.js
-// Webhook básico para recibir eventos de Stripe.
-// Nota: sin librería stripe, esta versión registra eventos y valida presencia de firma.
-// Para verificación criptográfica completa agrega STRIPE_WEBHOOK_SECRET y usa Stripe SDK en backend.
+// Recibe webhooks de Stripe y valida firma HMAC con STRIPE_WEBHOOK_SECRET.
+
+const crypto = require('crypto');
 
 function json(res, status, payload) {
   res.statusCode = status;
@@ -15,25 +15,63 @@ async function readRawBody(req) {
   return Buffer.concat(chunks).toString('utf8');
 }
 
+function parseStripeSignature(header) {
+  return String(header || '').split(',').reduce((acc, part) => {
+    const idx = part.indexOf('=');
+    if (idx > -1) {
+      const key = part.slice(0, idx);
+      const value = part.slice(idx + 1);
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(value);
+    }
+    return acc;
+  }, {});
+}
+
+function safeEqualHex(a, b) {
+  if (!a || !b) return false;
+  const ab = Buffer.from(a, 'hex');
+  const bb = Buffer.from(b, 'hex');
+  if (ab.length !== bb.length) return false;
+  return crypto.timingSafeEqual(ab, bb);
+}
+
+function verifyStripeSignature(raw, signatureHeader, secret) {
+  if (!secret) return { ok: true, skipped: true };
+  const parsed = parseStripeSignature(signatureHeader);
+  const timestamp = parsed.t && parsed.t[0];
+  const signatures = parsed.v1 || [];
+  if (!timestamp || signatures.length === 0) return { ok: false, reason: 'Firma incompleta.' };
+
+  const tolerance = 5 * 60;
+  const age = Math.abs(Math.floor(Date.now() / 1000) - Number(timestamp));
+  if (!Number.isFinite(age) || age > tolerance) return { ok: false, reason: 'Timestamp fuera de tolerancia.' };
+
+  const signedPayload = `${timestamp}.${raw}`;
+  const expected = crypto.createHmac('sha256', secret).update(signedPayload, 'utf8').digest('hex');
+  const ok = signatures.some(sig => safeEqualHex(expected, sig));
+  return ok ? { ok: true } : { ok: false, reason: 'Firma inválida.' };
+}
+
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' });
 
   const signature = req.headers['stripe-signature'];
-  if (process.env.STRIPE_WEBHOOK_SECRET && !signature) return json(res, 400, { error: 'Falta stripe-signature.' });
-
   let raw = '';
   let event = null;
+
   try {
     raw = await readRawBody(req);
+    const verified = verifyStripeSignature(raw, signature, process.env.STRIPE_WEBHOOK_SECRET);
+    if (!verified.ok) return json(res, 400, { error: verified.reason || 'Webhook no verificado.' });
     event = JSON.parse(raw || '{}');
-  } catch (_) {
-    return json(res, 400, { error: 'Payload inválido.' });
+  } catch (error) {
+    return json(res, 400, { error: error.message || 'Payload inválido.' });
   }
 
   const type = event.type || 'unknown';
   const object = event.data && event.data.object ? event.data.object : {};
 
-  // Eventos principales para conciliación posterior.
   if (type === 'checkout.session.completed') {
     console.log('[PIAGET][Stripe] Pago completado', {
       session: object.id,
