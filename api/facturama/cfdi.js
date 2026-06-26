@@ -1,10 +1,9 @@
-/* api/facturama/cfdi.js — Crear y timbrar un CFDI 4.0 con complemento IEDU.
-   Modalidad API Multiemisor: POST /api-lite/3/cfdis (el CSD del Issuer.Rfc debe estar cargado).
-   El front envía un payload neutro y aquí lo mapeamos al contrato de Facturama. */
-const { cors, fmFetch, readJson } = require('../_lib/facturama');
+/* api/facturama/cfdi.js — Crear y timbrar CFDI 4.0 con complemento IEDU.
+   Usa Facturama desde backend con Basic Auth; no expone credenciales al navegador. */
+const { cors, fmFetch, readJson, apiPath, normalizeError } = require('../_lib/facturama');
 
-const PRODUCT_CODE_EDU = '86121800';  // Servicios de instrucción educativa / colegiaturas
-const PRODUCT_CODE_GEN = '90111800';  // Servicios generales (transporte, materiales, etc.)
+const PRODUCT_CODE_EDU = process.env.FACTURAMA_PRODUCT_CODE_EDU || '86121500';
+const PRODUCT_CODE_GEN = process.env.FACTURAMA_PRODUCT_CODE_GEN || '84111506';
 
 module.exports = async (req, res) => {
   cors(res);
@@ -13,46 +12,43 @@ module.exports = async (req, res) => {
   try {
     const p = await readJson(req);
     const env = p.env || process.env.FACTURAMA_ENV || 'sandbox';
+    if (!p.emisor || !p.receptor || !p.concepto) return res.status(400).json({ error: 'Payload incompleto: emisor, receptor y concepto son obligatorios.' });
 
-    // ---- validaciones mínimas ----
-    if (!p.emisor || !p.receptor || !p.concepto) return res.status(400).json({ error: 'Payload incompleto (emisor / receptor / concepto)' });
     const subtotal = Number(p.concepto.unitPrice);
-    if (!subtotal) return res.status(400).json({ error: 'Subtotal inválido' });
+    if (!subtotal || subtotal <= 0) return res.status(400).json({ error: 'Subtotal inválido.' });
+
     const ivaRate = Number(p.iva || 0);
     const ivaTotal = Math.round(subtotal * ivaRate * 100) / 100;
     const total = Math.round((subtotal + ivaTotal) * 100) / 100;
     const edu = p.receptor.usoCFDI === 'D10';
 
-    // ---- concepto (Item) ----
     const item = {
       ProductCode: edu ? PRODUCT_CODE_EDU : PRODUCT_CODE_GEN,
-      IdentificationNumber: String(p.folio || ''),
-      Description: p.concepto.description,
-      Unit: 'Unidad de servicio',
+      IdentificationNumber: String(p.folio || Date.now()),
+      Description: p.concepto.description || 'Pago de servicios educativos',
+      Unit: 'Servicio',
       UnitCode: 'E48',
-      Quantity: '1',
-      UnitPrice: subtotal.toFixed(2),
-      Subtotal: subtotal.toFixed(2),
+      Quantity: 1,
+      UnitPrice: subtotal,
+      Subtotal: subtotal,
       TaxObject: ivaRate ? '02' : '01',
-      Total: total.toFixed(2),
+      Total: total,
     };
     if (ivaRate) {
-      item.Taxes = [{ Base: subtotal.toFixed(2), IsRetention: 'false', Name: 'IVA', Rate: ivaRate.toFixed(2), Total: ivaTotal.toFixed(2) }];
+      item.Taxes = [{ Base: subtotal, IsRetention: false, Name: 'IVA', Rate: ivaRate, Total: ivaTotal }];
     }
-    // Complemento IEDU sólo en colegiatura (D10)
     if (edu && p.alumno) {
       item.Complement = {
         EducationalInstitution: {
           StudentsName: p.alumno.name,
-          Curp: p.alumno.curp,
-          EducationLevel: p.alumno.nivelEdu,   // Preescolar | Primaria | Secundaria...
-          AutRvoe: p.alumno.cct,               // CCT / RVOE de la institución
-          ...(p.alumno.rfcPago ? { PaymentRfc: p.alumno.rfcPago } : {}),
+          CURP: p.alumno.curp,
+          EducationLevel: p.alumno.nivelEdu,
+          AutRVOE: p.alumno.cct,
+          PaymentRfc: p.alumno.rfcPago || p.receptor.rfc,
         },
       };
     }
 
-    // ---- comprobante ----
     const cfdi = {
       CfdiType: 'I',
       Currency: 'MXN',
@@ -60,33 +56,34 @@ module.exports = async (req, res) => {
       Serie: p.serie || 'A',
       Folio: String(p.folio || ''),
       ExpeditionPlace: p.emisor.cp,
-      PaymentForm: p.formaPago,
-      PaymentMethod: p.metodoPago,
+      PaymentForm: p.formaPago || '03',
+      PaymentMethod: p.metodoPago || 'PUE',
       Issuer: { Rfc: p.emisor.rfc, Name: p.emisor.name, FiscalRegime: p.emisor.regimen },
       Receiver: {
-        Rfc: p.receptor.rfc, Name: p.receptor.name, CfdiUse: p.receptor.usoCFDI,
-        FiscalRegime: p.receptor.regimen, TaxZipCode: p.receptor.cp,
+        Rfc: p.receptor.rfc,
+        Name: p.receptor.name,
+        CfdiUse: p.receptor.usoCFDI || 'G03',
+        FiscalRegime: p.receptor.regimen,
+        TaxZipCode: p.receptor.cp,
       },
       Items: [item],
     };
 
-    const out = await fmFetch(env, '/api-lite/3/cfdis', { method: 'POST', body: cfdi });
-
-    // ---- normalizar respuesta (Timbre Fiscal Digital) ----
+    const endpoint = apiPath('FACTURAMA_CFDI_PATH', '/api-lite/3/cfdis');
+    const out = await fmFetch(env, endpoint, { method: 'POST', body: cfdi });
     const ts = (out.Complement && out.Complement.TaxStamp) || {};
     res.status(200).json({
       ok: true,
-      facturamaId: out.Id,
-      uuid: ts.Uuid || out.Uuid,
-      fechaTimbrado: ts.Date,
-      noCertSAT: ts.SatCertNumber,
-      noCertEmisor: out.CertificateNumber,
-      selloCFDI: ts.CfdiSign,
-      selloSAT: ts.SatSign,
-      rfcPac: ts.RfcProvCertif,
-      total: out.Total,
+      facturamaId: out.Id || out.id || '',
+      uuid: ts.Uuid || out.Uuid || out.uuid || '',
+      fechaTimbrado: ts.Date || out.Date || '',
+      noCertSAT: ts.SatCertNumber || out.SatCertNumber || '',
+      noCertEmisor: out.CertificateNumber || out.CertNumber || '',
+      selloCFDI: ts.CfdiSign || out.CfdiSign || '',
+      selloSAT: ts.SatSign || out.SatSign || '',
+      rfcPac: ts.RfcProvCertif || 'FLI081010EK2',
+      total: out.Total || total,
+      raw: out,
     });
-  } catch (e) {
-    res.status(e.status || 500).json({ error: e.message, detail: e.data || null });
-  }
+  } catch (e) { normalizeError(res, e); }
 };
