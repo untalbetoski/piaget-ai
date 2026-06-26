@@ -59,5 +59,15 @@
     return { ok: true, value: data || safe };
   }
 
-  window.PiagetSettings = { load, save };
+  function loadSupabaseDiagnostics() {
+    if (document.querySelector('script[data-piaget-supabase-integration]')) return;
+    const s = document.createElement('script');
+    s.type = 'text/babel';
+    s.src = 'supabase_integration.jsx?v=1';
+    s.setAttribute('data-piaget-supabase-integration', '1');
+    document.body.appendChild(s);
+  }
+
+  window.PiagetSettings = { load, save, client, loadSupabaseDiagnostics };
+  setTimeout(loadSupabaseDiagnostics, 1000);
 })();
