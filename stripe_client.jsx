@@ -24,23 +24,27 @@
     const sessionId = qs.get('session_id');
     if (state === 'success') {
       setTimeout(() => toast('Pago iniciado/completado en Stripe. La conciliación se confirma por webhook.', 'ok'), 600);
-      try {
-        const clean = window.location.pathname + window.location.hash;
-        window.history.replaceState({}, '', clean);
-      } catch (_) {}
+      try { window.history.replaceState({}, '', window.location.pathname + window.location.hash); } catch (_) {}
       return { state, sessionId };
     }
     if (state === 'cancel') {
       setTimeout(() => toast('Pago cancelado por el usuario.', 'warn'), 600);
-      try {
-        const clean = window.location.pathname + window.location.hash;
-        window.history.replaceState({}, '', clean);
-      } catch (_) {}
+      try { window.history.replaceState({}, '', window.location.pathname + window.location.hash); } catch (_) {}
       return { state };
     }
     return null;
   }
 
-  window.PiagetStripe = { createCheckout, openCheckout, statusFromUrl };
+  function loadCobrosPatch() {
+    if (document.querySelector('script[data-piaget-stripe-cobros]')) return;
+    const s = document.createElement('script');
+    s.type = 'text/babel';
+    s.src = 'stripe_cobros_patch.jsx?v=1';
+    s.setAttribute('data-piaget-stripe-cobros', '1');
+    document.body.appendChild(s);
+  }
+
+  window.PiagetStripe = { createCheckout, openCheckout, statusFromUrl, loadCobrosPatch };
   setTimeout(statusFromUrl, 800);
+  setTimeout(loadCobrosPatch, 1500);
 })();
