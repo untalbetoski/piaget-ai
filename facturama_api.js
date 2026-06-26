@@ -1,7 +1,4 @@
-/* facturama_api.js — Cliente del front hacia el backend de timbrado (/api/facturama/*).
-   En MODO DEMO (sin backend desplegado o sin credenciales) health() falla y la UI
-   cae al timbrado simulado. Con el backend desplegado en Vercel + variables de
-   entorno FACTURAMA_USER/PASSWORD, el timbrado tiene valor fiscal real. */
+/* facturama_api.js — Cliente del front hacia /api/facturama/*. */
 (function () {
   const cfg = window.PIAGET_CONFIG || {};
   const base = String(cfg.facturacionApiBase || '').replace(/\/+$/, '');
@@ -16,20 +13,25 @@
   }
   const POST = (p, body) => jfetch(p, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) });
 
-  let _ready = null; // null = sin probar, true/false = resultado de health
+  let _ready = null;
+  let _lastHealth = null;
 
   const API = {
     base,
     configured: !!cfg.facturacionApiBase || cfg.facturacionApiBase === '',
     isReady() { return _ready === true; },
-    async health() {
+    lastHealth() { return _lastHealth; },
+    async health(env) {
       try {
-        const d = await jfetch('/api/facturama/health', {});
-        _ready = !!(d && d.ok && d.configured);
-        return { ...d, reachable: true, ready: _ready };
+        const q = env ? ('?env=' + encodeURIComponent(env)) : '';
+        const d = await jfetch('/api/facturama/health' + q, {});
+        _ready = !!(d && d.ok && d.configured && d.ready !== false && d.authOk !== false);
+        _lastHealth = { ...d, reachable: d.reachable !== false, ready: _ready };
+        return _lastHealth;
       } catch (e) {
         _ready = false;
-        return { ok: false, reachable: false, ready: false };
+        _lastHealth = { ok: false, reachable: false, ready: false, error: e.message, detail: e.data || null };
+        return _lastHealth;
       }
     },
     uploadCSD(body) { return POST('/api/facturama/csd', body); },
