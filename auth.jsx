@@ -61,14 +61,5 @@
     return useBackend ? authBackend(nid, sec) : authLocal(nid, sec);
   }
 
-  function loadPublicPatch() {
-    if (document.querySelector('script[data-piaget-index-sso]')) return;
-    const s = document.createElement('script');
-    s.src = 'sso_index_patch.js?v=1';
-    s.setAttribute('data-piaget-index-sso', '1');
-    document.head.appendChild(s);
-  }
-
-  window.PiagetAuth = { getSession, setSession, clearSession, authenticate, vistaForRole, mode: useBackend ? 'backend' : 'local', loadPublicPatch };
-  setTimeout(loadPublicPatch, 150);
+  window.PiagetAuth = { getSession, setSession, clearSession, authenticate, vistaForRole, mode: useBackend ? 'backend' : 'local' };
 })();
