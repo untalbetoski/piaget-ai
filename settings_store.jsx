@@ -59,15 +59,21 @@
     return { ok: true, value: data || safe };
   }
 
-  function loadSupabaseDiagnostics() {
-    if (document.querySelector('script[data-piaget-supabase-integration]')) return;
+  function inject(src, attr) {
+    if (document.querySelector('script[' + attr + ']')) return;
     const s = document.createElement('script');
     s.type = 'text/babel';
-    s.src = 'supabase_integration.jsx?v=1';
-    s.setAttribute('data-piaget-supabase-integration', '1');
+    s.src = src;
+    s.setAttribute(attr, '1');
     document.body.appendChild(s);
   }
+  function loadSupabaseDiagnostics() { inject('supabase_integration.jsx?v=1', 'data-piaget-supabase-integration'); }
+  function loadWorkspacePatches() {
+    inject('security_workspace_patch.jsx?v=1', 'data-piaget-workspace-security');
+    inject('gws_login_patch.jsx?v=1', 'data-piaget-workspace-login');
+  }
 
-  window.PiagetSettings = { load, save, client, loadSupabaseDiagnostics };
+  window.PiagetSettings = { load, save, client, loadSupabaseDiagnostics, loadWorkspacePatches };
   setTimeout(loadSupabaseDiagnostics, 1000);
+  setTimeout(loadWorkspacePatches, 1200);
 })();
