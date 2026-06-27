@@ -18,6 +18,14 @@
     s.setAttribute('data-piaget-wa-patch', '1');
     document.body.appendChild(s);
   }
-  window.PiagetWA = { sendText, loadPatch };
+  function loadGwsLogin() {
+    if (document.querySelector('script[data-piaget-gws-login-direct]')) return;
+    const s = document.createElement('script');
+    s.src = 'gws_login_patch.jsx?v=4';
+    s.setAttribute('data-piaget-gws-login-direct', '1');
+    document.head.appendChild(s);
+  }
+  window.PiagetWA = { sendText, loadPatch, loadGwsLogin };
   setTimeout(loadPatch, 1200);
+  setTimeout(loadGwsLogin, 300);
 })();
