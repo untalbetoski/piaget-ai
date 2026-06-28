@@ -1,12 +1,12 @@
-import { App } from '@capacitor/app';
-import { Browser } from '@capacitor/browser';
-import { Haptics, ImpactStyle } from '@capacitor/haptics';
-import { Network } from '@capacitor/network';
-import { SplashScreen } from '@capacitor/splash-screen';
-import { StatusBar, Style } from '@capacitor/status-bar';
+const Plugins = (window.Capacitor && window.Capacitor.Plugins) || {};
+const App = Plugins.App || {};
+const Browser = Plugins.Browser || {};
+const Haptics = Plugins.Haptics || {};
+const Network = Plugins.Network || {};
+const SplashScreen = Plugins.SplashScreen || {};
+const StatusBar = Plugins.StatusBar || {};
 
 const APP_ORIGIN = 'https://www.soypiaget.app';
-const FALLBACK_ORIGIN = 'https://soypiaget.app';
 const DEFAULT_PATH = '/plataforma';
 const ALLOWED_HOSTS = new Set(['www.soypiaget.app', 'soypiaget.app']);
 
@@ -20,7 +20,7 @@ let currentPath = DEFAULT_PATH;
 let isOnline = true;
 
 async function bootNativeChrome() {
-  try { await StatusBar.setStyle({ style: Style.Dark }); } catch (_) {}
+  try { await StatusBar.setStyle({ style: 'DARK' }); } catch (_) {}
   try { await StatusBar.setBackgroundColor({ color: '#07142f' }); } catch (_) {}
   try { await SplashScreen.hide(); } catch (_) {}
   setTimeout(() => $('splash')?.classList.add('hide'), 850);
@@ -48,7 +48,7 @@ function updateNetworkText() {
 
 async function checkNetwork() {
   try {
-    const st = await Network.getStatus();
+    const st = Network.getStatus ? await Network.getStatus() : { connected: navigator.onLine };
     isOnline = !!st.connected;
   } catch (_) {
     isOnline = navigator.onLine;
@@ -60,7 +60,7 @@ async function checkNetwork() {
 async function openPlatform(path = DEFAULT_PATH) {
   currentPath = path || DEFAULT_PATH;
   if (!(await checkNetwork())) { setView('offline'); return; }
-  try { await Haptics.impact({ style: ImpactStyle.Light }); } catch (_) {}
+  try { if (Haptics.impact) await Haptics.impact({ style: 'LIGHT' }); } catch (_) {}
   frame.src = safeUrl(currentPath);
   setView('browser');
 }
@@ -75,7 +75,8 @@ async function handleExternalUrl(url) {
   try {
     const u = new URL(url);
     if (ALLOWED_HOSTS.has(u.hostname)) return false;
-    await Browser.open({ url: u.href, presentationStyle: 'popover' });
+    if (Browser.open) await Browser.open({ url: u.href, presentationStyle: 'popover' });
+    else window.open(u.href, '_blank', 'noopener');
     return true;
   } catch (_) { return false; }
 }
@@ -94,20 +95,24 @@ document.querySelectorAll('.quick-card').forEach(btn => {
   btn.addEventListener('click', () => openPlatform(btn.dataset.target || DEFAULT_PATH));
 });
 
-Network.addListener('networkStatusChange', status => {
-  isOnline = !!status.connected;
-  updateNetworkText();
-  if (!isOnline) setView('offline');
-});
+if (Network.addListener) {
+  Network.addListener('networkStatusChange', status => {
+    isOnline = !!status.connected;
+    updateNetworkText();
+    if (!isOnline) setView('offline');
+  });
+}
 
-App.addListener('backButton', async () => {
-  if (!browser.classList.contains('hidden')) {
-    try { frame.contentWindow.history.back(); }
-    catch (_) { await goHome(); }
-  } else {
-    App.exitApp();
-  }
-});
+if (App.addListener) {
+  App.addListener('backButton', async () => {
+    if (!browser.classList.contains('hidden')) {
+      try { frame.contentWindow.history.back(); }
+      catch (_) { await goHome(); }
+    } else if (App.exitApp) {
+      App.exitApp();
+    }
+  });
+}
 
 window.addEventListener('message', async ev => {
   const data = ev.data || {};
