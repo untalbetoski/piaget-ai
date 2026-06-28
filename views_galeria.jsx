@@ -15,6 +15,10 @@
     if (error) throw new Error(error.message || 'Error de galería');
     return data;
   }
+  function StatCard({ label, value, icon, tone }) {
+    const t = (window.TONE && window.TONE[tone]) || { bg:'var(--surface-2)', c:'var(--accent)' };
+    return <div className="card pad"><div className="row center gap-12"><div className="kpi-ico" style={{ background:t.bg, color:t.c, marginBottom:0 }}><Icon name={icon} size={19}/></div><div><div className="faint" style={{ fontSize:12 }}>{label}</div><div className="font-display" style={{ fontSize:26, fontWeight:800, lineHeight:1 }}>{value}</div></div></div></div>;
+  }
   function imageFile(file) {
     return new Promise((ok, bad) => {
       const rd = new FileReader();
@@ -96,9 +100,9 @@
         {writer && <button className="btn primary" onClick={()=>setEdit({})}><Icon name="plus" size={15} className="btn-ico"/>Nueva galería</button>}
       </PageHead>
       <div className="grid" style={{gridTemplateColumns:'repeat(3,1fr)'}}>
-        <div className="card pad"><Kpi label="Galerías" value={albums.length} icon="image" tone="violet"/></div>
-        <div className="card pad"><Kpi label="Fotos" value={total} icon="camera" tone="blue"/></div>
-        <div className="card pad"><Kpi label="Permiso" value={writer?'Editor':'Lectura'} icon="shield" tone={writer?'green':'gray'}/></div>
+        <StatCard label="Galerías" value={albums.length} icon="image" tone="violet" />
+        <StatCard label="Fotos" value={total} icon="image" tone="blue" />
+        <StatCard label="Permiso" value={writer?'Editor':'Lectura'} icon="shield" tone={writer?'green':'gray'} />
       </div>
       {!writer && <div className="card pad mt-16 faint">Familias y estudiantes solo pueden ver galerías. Crear, editar y eliminar es para Dirección, Coordinación y Docentes.</div>}
       <div className="grid mt-16" style={{gridTemplateColumns:'repeat(auto-fit,minmax(310px,1fr))',alignItems:'start'}}>
