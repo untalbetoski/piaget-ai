@@ -26,7 +26,13 @@
     if (window.PIAGET_SB) return window.PIAGET_SB;
     if (_sb) return _sb;
     if (!window.supabase) {
-      await new Promise((res, rej) => { const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js'; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
+      await new Promise((res, rej) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/@' + 'supabase/supabase-js@2.45.4/dist/umd/supabase.min.js';
+        s.onload = res;
+        s.onerror = rej;
+        document.head.appendChild(s);
+      });
     }
     _sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey);
     window.PIAGET_SB = _sb;
@@ -61,5 +67,14 @@
     return useBackend ? authBackend(nid, sec) : authLocal(nid, sec);
   }
 
-  window.PiagetAuth = { getSession, setSession, clearSession, authenticate, vistaForRole, mode: useBackend ? 'backend' : 'local' };
+  function loadLandingImages() {
+    if (document.querySelector('script[data-piaget-landing-images]')) return;
+    const s = document.createElement('script');
+    s.src = 'landing_images_public.js?v=1';
+    s.setAttribute('data-piaget-landing-images', '1');
+    document.head.appendChild(s);
+  }
+
+  window.PiagetAuth = { getSession, setSession, clearSession, authenticate, vistaForRole, mode: useBackend ? 'backend' : 'local', loadLandingImages };
+  setTimeout(loadLandingImages, 150);
 })();
