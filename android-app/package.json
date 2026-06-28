@@ -1,0 +1,28 @@
+{
+  "name": "soy-piaget-android",
+  "version": "0.1.0",
+  "private": true,
+  "description": "App Android wrapper avanzado para Soy Piaget.",
+  "scripts": {
+    "sync": "npx cap sync android",
+    "open": "npx cap open android",
+    "add:android": "npx cap add android",
+    "build:debug": "cd android && ./gradlew assembleDebug",
+    "build:release": "cd android && ./gradlew bundleRelease"
+  },
+  "dependencies": {
+    "@capacitor/android": "latest",
+    "@capacitor/app": "latest",
+    "@capacitor/browser": "latest",
+    "@capacitor/camera": "latest",
+    "@capacitor/core": "latest",
+    "@capacitor/filesystem": "latest",
+    "@capacitor/haptics": "latest",
+    "@capacitor/network": "latest",
+    "@capacitor/splash-screen": "latest",
+    "@capacitor/status-bar": "latest"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "latest"
+  }
+}
