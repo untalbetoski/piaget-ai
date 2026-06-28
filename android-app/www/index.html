@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#07142f" />
+  <title>Soy Piaget</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="splash" class="splash">
+    <div class="brand-mark">P</div>
+    <div class="brand-title">SOY PIAGET</div>
+    <div class="brand-sub">Evolución educativa</div>
+  </div>
+
+  <main class="app-shell">
+    <section id="start" class="start-screen">
+      <div class="topbar">
+        <div class="mini-logo">P</div>
+        <div>
+          <div class="title">Soy Piaget</div>
+          <div id="netState" class="subtitle">Comprobando conexión…</div>
+        </div>
+      </div>
+
+      <div class="hero-card">
+        <div class="hero-pill">App institucional</div>
+        <h1>Bienvenido a Soy Piaget</h1>
+        <p>Accede a comunicados, galerías, pagos, credencial QR, clases y seguimiento escolar desde tu Android.</p>
+        <button id="openPlatform" class="primary-btn">Entrar a la plataforma</button>
+      </div>
+
+      <div class="quick-grid">
+        <button data-target="/plataforma" class="quick-card"><span>▣</span> Plataforma</button>
+        <button data-target="/plataforma#galeria" class="quick-card"><span>▧</span> Galería</button>
+        <button data-target="/plataforma#scanner-qr" class="quick-card"><span>◈</span> QR</button>
+        <button data-target="/plataforma#comunicados" class="quick-card"><span>✉</span> Comunicados</button>
+      </div>
+    </section>
+
+    <section id="offline" class="offline hidden">
+      <div class="offline-card">
+        <div class="offline-icon">!</div>
+        <h2>Sin conexión</h2>
+        <p>No pudimos conectar con Soy Piaget. Revisa tu internet y vuelve a intentar.</p>
+        <button id="retry" class="primary-btn">Reintentar</button>
+      </div>
+    </section>
+
+    <section id="browser" class="browser hidden">
+      <div class="browser-bar">
+        <button id="backBtn" class="bar-btn">‹</button>
+        <div class="bar-title">Soy Piaget</div>
+        <button id="homeBtn" class="bar-btn">⌂</button>
+      </div>
+      <iframe id="platformFrame" title="Soy Piaget Plataforma" allow="camera; microphone; geolocation; clipboard-read; clipboard-write; fullscreen; payment" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+    </section>
+  </main>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
