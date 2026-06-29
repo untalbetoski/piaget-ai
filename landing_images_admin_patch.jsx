@@ -1,10 +1,21 @@
 /* PIAGET credential text patch — se ejecuta después de config_admin_roles_patch.jsx */
 (function(){
   const BRAND='PIAGET';
+  const CYCLE='Ciclo 2026–2027';
+  const SCHOOL_CYCLE='Ciclo escolar 2026–2027';
+  const VALIDITY='Ciclo escolar 2026–2027 · vence 31 ago 2027';
   const RX_COLEGIO=/^COLEGIO\s+(JEAN\s+)?PIAGET$/i;
   const RX_PIAGET=/^(JEAN\s+)?PIAGET$/i;
+  function fixCycleText(raw){
+    return String(raw||'')
+      .replace(/Ciclo escolar\s+2025[–-]2026\s+·\s+vence\s+31\s+ago\s+2026/gi,VALIDITY)
+      .replace(/Ciclo escolar\s+2025[–-]2026/gi,SCHOOL_CYCLE)
+      .replace(/Ciclo\s+2025[–-]2026/gi,CYCLE)
+      .replace(/31\s+ago\s+2026/gi,'31 ago 2027');
+  }
   function fixTextValue(value){
-    const raw=String(value||''), t=raw.trim();
+    let raw=fixCycleText(value);
+    const t=raw.trim();
     if(!t) return raw;
     if(t==='EDUCACIÓN INTEGRAL') return '';
     if(RX_COLEGIO.test(t)) return raw.replace(/COLEGIO\s+(JEAN\s+)?PIAGET/i,BRAND);
