@@ -51,14 +51,51 @@
       return q.createSvgTag(5, 2);
     } catch (_) { return ''; }
   }
+  function ensureCredentialPrintStyles() {
+    if (document.getElementById('piaget-credential-print-fix')) return;
+    const style = document.createElement('style');
+    style.id = 'piaget-credential-print-fix';
+    style.textContent = `
+      @media print {
+        html, body { overflow: visible !important; background: #fff !important; height: auto !important; }
+        body * { visibility: hidden !important; }
+        .cred-print, .cred-print * { visibility: visible !important; }
+        .cred-print {
+          position: fixed !important;
+          left: 50% !important;
+          top: 20px !important;
+          transform: translateX(-50%) !important;
+          width: 330px !important;
+          max-width: 330px !important;
+          box-shadow: none !important;
+          background: #fff !important;
+          color: #111827 !important;
+          break-inside: avoid !important;
+          page-break-inside: avoid !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        .cred-print .badge {
+          white-space: normal !important;
+          max-width: 220px !important;
+          text-align: center !important;
+          overflow-wrap: anywhere !important;
+          word-break: break-word !important;
+        }
+        .cred-print svg { max-width: 100% !important; height: auto !important; }
+      }
+    `;
+    document.head.appendChild(style);
+  }
 
   function UserCredentialCard({ user }) {
+    React.useEffect(() => { ensureCredentialPrintStyles(); }, []);
     const payload = makeCredentialPayload(user);
     const svg = React.useMemo(() => makeQR(payload), [user.id, user.email, user.role, user.status]);
     const active = (user.status || 'Activo') === 'Activo';
     const t = window.TONE[tone(user.role)] || window.TONE.gray;
     return (
-      <div className="card" style={{ width: 330, overflow: 'hidden', border: '1px solid var(--border)', boxShadow: 'var(--shadow-lg)' }}>
+      <div className="card cred-print" style={{ width: 330, overflow: 'hidden', border: '1px solid var(--border)', boxShadow: 'var(--shadow-lg)' }}>
         <div style={{ padding: 18, background: 'linear-gradient(135deg, var(--surface), var(--surface-2))', borderBottom: '1px solid var(--border)' }}>
           <div className="row between center">
             <div>
@@ -98,7 +135,7 @@
     };
     return (
       <Modal open width={760} onClose={onClose} title="Credencial de acceso"
-        footer={<><button className="btn" onClick={onClose}>Cerrar</button><button className="btn" onClick={copyPayload}><Icon name="copy" size={15} className="btn-ico" />Copiar QR</button><button className="btn primary" onClick={() => window.print()}><Icon name="download" size={15} className="btn-ico" />Imprimir</button></>}>
+        footer={<><button className="btn" onClick={onClose}>Cerrar</button><button className="btn" onClick={copyPayload}><Icon name="copy" size={15} className="btn-ico" />Copiar QR</button><button className="btn primary" onClick={() => { ensureCredentialPrintStyles(); window.print(); }}><Icon name="download" size={15} className="btn-ico" />Imprimir</button></>}>
         <div className="row" style={{ gap: 24, alignItems: 'flex-start', flexWrap: 'wrap' }}>
           <UserCredentialCard user={user || {}} />
           <div className="card pad" style={{ flex: 1, minWidth: 260 }}>
