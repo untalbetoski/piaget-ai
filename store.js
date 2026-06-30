@@ -1,17 +1,30 @@
 (function () {
   const cfg = window.PIAGET_CONFIG || {};
-  const LSKEY = window.PIAGET_FRESH ? 'piaget_db_v12_fresh' : 'piaget_db_v12';
+  const LSKEY = window.PIAGET_FRESH ? 'piaget_db_v13_fresh' : 'piaget_db_v13';
+  const OLD_KEYS = ['piaget_db_v12', 'piaget_db_v12_fresh'];
   const SKEY = 'piaget_session';
-  const SYNCED = ['students','staff','processes','invoices','leads','announcements','agents','matriculas','docs','evaluaciones','diario','tareas','tickets','facturas','cobros','docentes','products','ventas','onlineOrders','missions','missionSubmissions','badges','rewards','engage_retos','engageParticipations','familyAccounts','egresos','experiences'];
-  const FLEX = new Set(['matriculas','docs','evaluaciones','diario','tareas','tickets','facturas','cobros','docentes','products','ventas','onlineOrders','missions','missionSubmissions','badges','rewards','engage_retos','engageParticipations','familyAccounts','egresos','experiences']);
+  const SYNCED = ['clases','students','staff','processes','invoices','leads','announcements','agents','matriculas','docs','evaluaciones','diario','tareas','tickets','facturas','cobros','docentes','products','ventas','onlineOrders','missions','missionSubmissions','badges','rewards','engage_retos','engageParticipations','familyAccounts','egresos','experiences'];
+  const FLEX = new Set(['clases','matriculas','docs','evaluaciones','diario','tareas','tickets','facturas','cobros','docentes','products','ventas','onlineOrders','missions','missionSubmissions','badges','rewards','engage_retos','engageParticipations','familyAccounts','egresos','experiences']);
   const uid = () => (crypto.randomUUID ? crypto.randomUUID() : 'id-' + Math.random().toString(36).slice(2) + Date.now());
   const clone = o => JSON.parse(JSON.stringify(o));
   const clean = o => { const x = { ...(o || {}) }; delete x._id; return x; };
   const sid = () => { try { return (JSON.parse(localStorage.getItem(SKEY) || 'null') || {}).session_token || ''; } catch (_) { return ''; } };
 
+  function readSaved(keys) {
+    for (const k of keys) {
+      try { const saved = JSON.parse(localStorage.getItem(k) || 'null'); if (saved) return saved; } catch (_) {}
+    }
+    return null;
+  }
   function seed() {
     const base = clone(window.DB_DEFAULTS || {});
-    try { const saved = JSON.parse(localStorage.getItem(LSKEY) || 'null'); if (saved) { SYNCED.forEach(c => { if (saved[c]) base[c] = saved[c]; }); if (saved.copilotThread) base.copilotThread = saved.copilotThread; } } catch (_) {}
+    try {
+      const saved = readSaved([LSKEY, ...OLD_KEYS]);
+      if (saved) {
+        SYNCED.forEach(c => { if (saved[c]) base[c] = saved[c]; });
+        if (saved.copilotThread) base.copilotThread = saved.copilotThread;
+      }
+    } catch (_) {}
     SYNCED.forEach(c => { (base[c] || []).forEach(it => { if (!it._id) it._id = uid(); }); });
     return base;
   }
@@ -45,7 +58,10 @@
       sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey);
       window.PIAGET_SB = sb;
       Store.mode = sid() ? 'supabase-secure' : 'supabase';
-      for (const c of SYNCED) { const rows = await readColl(c); if (Array.isArray(rows) && rows.length) state[c] = rows; }
+      for (const c of SYNCED) {
+        const rows = await readColl(c);
+        if (Array.isArray(rows)) state[c] = rows;
+      }
       window.DB = state; emit(false);
       if (cfg.realtime) SYNCED.forEach(c => sb.channel('pub-' + c).on('postgres_changes', { event: '*', schema: 'public', table: c }, () => refreshCollection(c)).subscribe());
       console.info('[PIAGET] Supabase OK', Store.mode);
@@ -84,7 +100,7 @@
     remove(coll, id) { state[coll] = (state[coll] || []).filter(x => x._id !== id); emit(); push('delete', coll, { id }); },
     setThread(thread) { state.copilotThread = thread; emit(); },
     log(who, action, icon = 'spark') { const item = { _id: uid(), who, action, icon, time: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) }; state.activity = [item, ...(state.activity || [])].slice(0, 8); emit(); push('insert', 'activity', { item }); },
-    reset() { try { localStorage.removeItem(LSKEY); } catch (_) {} state = seed(); window.DB = state; emit(false); },
+    reset() { try { localStorage.removeItem(LSKEY); OLD_KEYS.forEach(k => localStorage.removeItem(k)); } catch (_) {} state = seed(); window.DB = state; emit(false); },
   };
   window.Store = Store;
   window.useStore = function () { const [, force] = React.useState(0); React.useEffect(() => Store.subscribe(() => force(n => n + 1)), []); return Store; };
