@@ -5,7 +5,7 @@ function ClaseEditModal({ clase, onClose }) {
   const open = !!clase;
   const [form, setForm] = React.useState({ titular: '', salon: '', alumnos: 0 });
   React.useEffect(() => {
-    if (clase) setForm({ titular: clase.titular, salon: clase.salon, alumnos: clase.alumnos });
+    if (clase) setForm({ titular: clase.titular || '', salon: clase.salon || '', alumnos: clase.alumnos });
   }, [clase]);
   if (!open) return null;
   const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
@@ -15,15 +15,15 @@ function ClaseEditModal({ clase, onClose }) {
     toast('Datos del grupo ' + clase.g + ' actualizados', 'ok');
     onClose();
   };
-  const docentes = [...new Set([form.titular, ...DB.staff.filter(s => s.role.startsWith('Docente')).map(s => 'Mtra. ' + s.name), 'Mtra. Paola Rivas', 'Mtro. Jorge Patiño'])];
+  const docentes = [...new Set([form.titular, ...DB.staff.filter(s => s.role.startsWith('Docente')).map(s => 'Mtra. ' + s.name), 'Mtra. Paola Rivas', 'Mtro. Jorge Patiño'].filter(Boolean))];
   return (
     <Modal open={open} title={'Editar grupo ' + clase.g} onClose={onClose} width={460}
       footer={<>
         <button className="btn" onClick={onClose}>Cancelar</button>
         <button className="btn primary" onClick={save}><Icon name="check" size={15} className="btn-ico" />Guardar cambios</button>
       </>}>
-      <Field label="Docente titular">
-        <TextInput value={form.titular} onChange={set('titular')} list="docentes-dl" />
+      <Field label="Docente titular (opcional)">
+        <TextInput value={form.titular} onChange={set('titular')} list="docentes-dl" placeholder="Sin asignar por ahora" />
         <datalist id="docentes-dl">{docentes.map(d => <option key={d} value={d} />)}</datalist>
       </Field>
       <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 14 }}>
@@ -31,7 +31,7 @@ function ClaseEditModal({ clase, onClose }) {
         <Field label="Alumnos inscritos"><NumberInput value={form.alumnos} min={1} max={40} onChange={set('alumnos')} /></Field>
       </div>
       <div className="row center gap-8 faint" style={{ fontSize: 12.5 }}>
-        <Icon name="alert" size={14} />Los cambios se reflejan en listas, horarios y reportes del grupo.
+        <Icon name="alert" size={14} />El docente titular puede quedar pendiente y asignarse después desde el alta o edición de docentes.
       </div>
     </Modal>
   );
@@ -54,6 +54,8 @@ function ClaseDrawer({ claseId, onClose, onEdit }) {
     const cfg = nivelCfg(c.nivel);
     const t = window.TONE[cfg.tone];
     const roster = alumnosDeClase(c).filter(a => a.name.toLowerCase().includes(q.toLowerCase()));
+    const titular = String(c.titular || '').trim();
+    const titularLabel = titular || 'Sin docente titular asignado';
     body = (
       <>
         <div className="row center between" style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
@@ -72,12 +74,12 @@ function ClaseDrawer({ claseId, onClose, onEdit }) {
 
         <div style={{ flex: 1, overflowY: 'auto', padding: 20, display: 'flex', flexDirection: 'column', gap: 18 }}>
           <div className="row center gap-10" style={{ padding: '12px 14px', borderRadius: 12, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-            <Avatar name={c.titular.replace(/^(Mtra?\.|Mtro\.)\s*/, '')} size={36} />
+            <Avatar name={titularLabel.replace(/^(Mtra?\.|Mtro\.)\s*/, '')} size={36} />
             <div className="grow">
-              <div style={{ fontWeight: 600, fontSize: 13.5 }}>{c.titular}</div>
+              <div style={{ fontWeight: 600, fontSize: 13.5 }}>{titularLabel}</div>
               <div className="faint" style={{ fontSize: 12 }}>Docente titular</div>
             </div>
-            <Badge tone={cfg.tone}>{c.nivel}</Badge>
+            <Badge tone={titular ? cfg.tone : 'gray'}>{titular ? c.nivel : 'Pendiente'}</Badge>
           </div>
 
           <div className="grid" style={{ gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
@@ -121,7 +123,7 @@ function ClaseDrawer({ claseId, onClose, onEdit }) {
   );
 }
 
-/* ---------- Modal: nueva clase (titular desde el módulo Docentes) ---------- */
+/* ---------- Modal: nueva clase (titular opcional; puede asignarse desde Docentes) ---------- */
 function ClaseNuevaModal({ open, onClose }) {
   const [form, setForm] = React.useState({ nivel: 'Primaria', g: '', titular: '', salon: '', alumnos: 25 });
   React.useEffect(() => { if (open) setForm({ nivel: 'Primaria', g: '', titular: '', salon: '', alumnos: 25 }); }, [open]);
@@ -129,11 +131,12 @@ function ClaseNuevaModal({ open, onClose }) {
   const docentes = (window.docBuildRoster ? window.docBuildRoster() : []);
   const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
   function save() {
-    if (!form.g.trim()) { toast('Escribe el nombre del grupo', 'warn'); return; }
-    if (!form.titular.trim()) { toast('Selecciona al docente titular', 'warn'); return; }
-    Store.add('clases', { nivel: form.nivel, g: form.g.trim(), titular: form.titular.trim(), salon: form.salon.trim() || '—', alumnos: Math.max(1, parseInt(form.alumnos, 10) || 25), asistencia: 95, avg: form.nivel === 'Preescolar' ? null : 8.2 });
-    Store.log(DB.user.name, 'creó el grupo ' + form.g.trim() + ' (' + form.nivel + ') con titular ' + form.titular.trim(), 'plus');
-    toast('Grupo ' + form.g.trim() + ' creado · ligado a ' + form.titular.trim() + ' ✓');
+    const grupo = form.g.trim();
+    const titular = form.titular.trim();
+    if (!grupo) { toast('Escribe el nombre del grupo', 'warn'); return; }
+    Store.add('clases', { nivel: form.nivel, g: grupo, titular, salon: form.salon.trim() || '—', alumnos: Math.max(1, parseInt(form.alumnos, 10) || 25), asistencia: 95, avg: form.nivel === 'Preescolar' ? null : 8.2 });
+    Store.log(DB.user.name, 'creó el grupo ' + grupo + ' (' + form.nivel + ')' + (titular ? ' con titular ' + titular : ' sin docente titular asignado'), 'plus');
+    toast('Grupo ' + grupo + ' creado' + (titular ? ' · ligado a ' + titular : ' · sin docente titular por ahora') + ' ✓');
     onClose();
   }
   return (
@@ -143,11 +146,11 @@ function ClaseNuevaModal({ open, onClose }) {
         <Field label="Nivel"><SelectInput value={form.nivel} onChange={set('nivel')} options={['Preescolar', 'Primaria', 'Secundaria']} /></Field>
         <Field label="Grupo"><TextInput value={form.g} onChange={set('g')} placeholder="p. ej. 3° A" autoFocus /></Field>
       </div>
-      <Field label="Docente titular">
+      <Field label="Docente titular (opcional)">
         <SelectInput value={form.titular} onChange={e => { const v = e.target.value; const dd = docentes.find(x => ((x.titulo ? x.titulo + ' ' : '') + x.name) === v); setForm(f => ({ ...f, titular: v, nivel: (dd && dd.niveles && dd.niveles[0]) || f.nivel })); }}
-          options={[{ value: '', label: 'Selecciona docente…' }, ...docentes.map(dd => { const full = (dd.titulo ? dd.titulo + ' ' : '') + dd.name; return { value: full, label: full + ' · ' + (dd.niveles || []).join('/') }; })]} />
+          options={[{ value: '', label: 'Sin asignar por ahora' }, ...docentes.map(dd => { const full = (dd.titulo ? dd.titulo + ' ' : '') + dd.name; return { value: full, label: full + ' · ' + (dd.niveles || []).join('/') }; })]} />
       </Field>
-      <div className="faint" style={{ fontSize: 11.5, marginTop: -4, marginBottom: 4 }}>La lista proviene del módulo <b>Docentes</b>; el grupo se añade a la carga académica del titular.</div>
+      <div className="faint" style={{ fontSize: 11.5, marginTop: -4, marginBottom: 4 }}>Opcional. Puedes crear el grupo ahora y asignar el docente titular después desde el alta o edición de docentes.</div>
       <div className="field-row">
         <Field label="Salón"><TextInput value={form.salon} onChange={set('salon')} placeholder="A-101" /></Field>
         <Field label="Alumnos"><NumberInput value={form.alumnos} min={1} max={40} onChange={set('alumnos')} /></Field>
@@ -212,28 +215,31 @@ function Clases({ go }) {
                 </span>
               </div>
               <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))' }}>
-                {l.grupos.map((c) => (
-                  <div className="card pad clickable" key={c._id} onClick={() => setDetailId(c._id)} style={{ display: 'flex', flexDirection: 'column', gap: 11, cursor: 'pointer' }}>
-                    <div className="row between center">
-                      <div className="kpi-ico" style={{ background: t.bg, color: t.c, marginBottom: 0 }}><Icon name={l.icon} size={18} /></div>
-                      <div className="row center gap-6" onClick={(e) => e.stopPropagation()}>
-                        <span className="faint font-mono" style={{ fontSize: 11 }}>{c.alumnos} alumnos</span>
-                        <RowMenu items={[
-                          { icon: 'edit', label: 'Editar datos', onClick: () => setEditing(c) },
-                          { icon: 'trash', label: 'Eliminar clase', danger: true, onClick: () => setDeleting(c) },
-                        ]} />
+                {l.grupos.map((c) => {
+                  const titular = String(c.titular || '').trim();
+                  return (
+                    <div className="card pad clickable" key={c._id} onClick={() => setDetailId(c._id)} style={{ display: 'flex', flexDirection: 'column', gap: 11, cursor: 'pointer' }}>
+                      <div className="row between center">
+                        <div className="kpi-ico" style={{ background: t.bg, color: t.c, marginBottom: 0 }}><Icon name={l.icon} size={18} /></div>
+                        <div className="row center gap-6" onClick={(e) => e.stopPropagation()}>
+                          <span className="faint font-mono" style={{ fontSize: 11 }}>{c.alumnos} alumnos</span>
+                          <RowMenu items={[
+                            { icon: 'edit', label: 'Editar datos', onClick: () => setEditing(c) },
+                            { icon: 'trash', label: 'Eliminar clase', danger: true, onClick: () => setDeleting(c) },
+                          ]} />
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: 15.5, fontFamily: 'var(--font-display)' }}>Grupo {c.g}</div>
+                        <div className="faint" style={{ fontSize: 12, marginTop: 2 }}>{titular || 'Sin docente titular'} · Salón {c.salon}</div>
+                      </div>
+                      <div className="row between center" style={{ paddingTop: 10, borderTop: '1px solid var(--border)' }}>
+                        <span className="faint" style={{ fontSize: 12 }}>{c.avg != null ? 'Promedio' : 'Asistencia'}</span>
+                        <span className="tnum" style={{ fontWeight: 600 }}>{c.avg != null ? c.avg.toFixed(1) : c.asistencia + '%'}</span>
                       </div>
                     </div>
-                    <div>
-                      <div style={{ fontWeight: 600, fontSize: 15.5, fontFamily: 'var(--font-display)' }}>Grupo {c.g}</div>
-                      <div className="faint" style={{ fontSize: 12, marginTop: 2 }}>{c.titular} · Salón {c.salon}</div>
-                    </div>
-                    <div className="row between center" style={{ paddingTop: 10, borderTop: '1px solid var(--border)' }}>
-                      <span className="faint" style={{ fontSize: 12 }}>{c.avg != null ? 'Promedio' : 'Asistencia'}</span>
-                      <span className="tnum" style={{ fontWeight: 600 }}>{c.avg != null ? c.avg.toFixed(1) : c.asistencia + '%'}</span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </section>
           );
@@ -245,7 +251,7 @@ function Clases({ go }) {
       <ClaseNuevaModal open={creating} onClose={() => setCreating(false)} />
       <Modal open={!!deleting} onClose={() => setDeleting(null)} title="Eliminar clase"
         footer={<><button className="btn" onClick={() => setDeleting(null)}>Cancelar</button><button className="btn primary" style={{ background: 'var(--red)', borderColor: 'var(--red)' }} onClick={confirmDelete}><Icon name="trash" size={15} className="btn-ico" />Eliminar</button></>}>
-        {deleting && <p style={{ fontSize: 13.5, lineHeight: 1.5, margin: 0 }}>Se eliminará el <b>Grupo {deleting.g}</b> ({deleting.nivel}) con titular {deleting.titular}. Esta acción no afecta el historial de calificaciones ni asistencia ya capturado.</p>}
+        {deleting && <p style={{ fontSize: 13.5, lineHeight: 1.5, margin: 0 }}>Se eliminará el <b>Grupo {deleting.g}</b> ({deleting.nivel}){deleting.titular ? ' con titular ' + deleting.titular : ' sin docente titular asignado'}. Esta acción no afecta el historial de calificaciones ni asistencia ya capturado.</p>}
       </Modal>
     </div>
   );
