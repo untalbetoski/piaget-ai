@@ -1,15 +1,18 @@
 /* views_clases.jsx — Vista Clases + drawer de alumnos + modal de edición */
 
+function claseIsSeed(c) { return /^cls-\d+$/i.test(String((c && c._id) || '')); }
+function claseCleanList(list) { return (Array.isArray(list) ? list : []).filter(c => c && !claseIsSeed(c)); }
 function claseRoster(c) {
   try { return (window.alumnosDeClase ? alumnosDeClase(c) : []).filter(Boolean); }
   catch (e) { return []; }
 }
 function claseCount(c) { return claseRoster(c).length; }
 function clasesSource() {
-  const base = (window.DB && Array.isArray(DB.clases)) ? DB.clases : [];
-  try { return window.docClases ? window.docClases(base) : base; }
+  const base = claseCleanList((window.DB && Array.isArray(DB.clases)) ? DB.clases : []);
+  try { return claseCleanList(window.docClases ? window.docClases(base) : base); }
   catch (e) { return base; }
 }
+function claseNormalizeGroup(g) { return String(g || '').trim().replace(/\s+/g, ' ').toLowerCase(); }
 
 /* ---------- Modal: editar datos de la clase ---------- */
 function ClaseEditModal({ clase, onClose }) {
@@ -23,6 +26,7 @@ function ClaseEditModal({ clase, onClose }) {
   const save = () => {
     const n = claseCount(clase);
     Store.update('clases', clase._id, { titular: form.titular.trim(), salon: form.salon.trim(), alumnos: n, asistencia: n ? (clase.asistencia || 100) : 0, avg: n ? clase.avg : null });
+    if (Store.saveState) Store.saveState();
     Store.log(DB.user.name, 'actualizó los datos del grupo ' + clase.g, 'edit');
     toast('Datos del grupo ' + clase.g + ' actualizados', 'ok');
     onClose();
@@ -50,7 +54,7 @@ function ClaseEditModal({ clase, onClose }) {
 
 /* ---------- Drawer: detalle de la clase y alumnos ---------- */
 function ClaseDrawer({ claseId, onClose, onEdit }) {
-  const c = (DB.clases || []).find(x => x._id === claseId);
+  const c = claseCleanList(DB.clases || []).find(x => x._id === claseId);
   const open = !!c;
   const [q, setQ] = React.useState('');
   React.useEffect(() => { if (open) setQ(''); }, [claseId]);
@@ -146,12 +150,15 @@ function ClaseNuevaModal({ open, onClose }) {
   const docentes = (() => { try { return (window.docBuildRoster ? window.docBuildRoster() : []); } catch (e) { return []; } })();
   const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
   function save() {
-    const grupo = form.g.trim();
+    const grupo = form.g.trim().replace(/\s+/g, ' ');
     const titular = form.titular.trim();
     if (!grupo) { toast('Escribe el nombre del grupo', 'warn'); return; }
-    const exists = (DB.clases || []).some(c => String(c.nivel || '') === form.nivel && String(c.g || '').trim().toLowerCase() === grupo.toLowerCase());
-    if (exists) { toast('Ya existe un grupo con ese nombre en ' + form.nivel, 'warn'); return; }
-    Store.add('clases', { nivel: form.nivel, g: grupo, titular, salon: form.salon.trim() || '—', alumnos: 0, asistencia: 0, avg: null, createdManual: true });
+    const exists = clasesSource().some(c => String(c.nivel || '') === form.nivel && claseNormalizeGroup(c.g) === claseNormalizeGroup(grupo));
+    if (exists) { toast('Ya existe un grupo real con ese nombre en ' + form.nivel, 'warn'); return; }
+    const item = { nivel: form.nivel, g: grupo, titular, salon: form.salon.trim() || '—', alumnos: 0, asistencia: 0, avg: null, createdManual: true };
+    const created = Store.add('clases', item);
+    if (!created && Array.isArray(DB.clases)) DB.clases = [{ _id: (crypto.randomUUID ? crypto.randomUUID() : 'cls-manual-' + Date.now()), ...item }, ...DB.clases];
+    if (Store.saveState) Store.saveState();
     Store.log(DB.user.name, 'creó el grupo ' + grupo + ' (' + form.nivel + ')' + (titular ? ' con titular ' + titular : ' sin docente titular asignado'), 'plus');
     toast('Grupo ' + grupo + ' creado · sin alumnos hasta dar de alta estudiantes ✓');
     onClose();
@@ -186,6 +193,7 @@ function Clases({ go }) {
   function confirmDelete() {
     const c = deleting;
     Store.remove('clases', c._id);
+    if (Store.saveState) Store.saveState();
     Store.log(DB.user.name, 'eliminó el grupo ' + c.g + ' (' + c.nivel + ')', 'trash');
     toast('Grupo ' + c.g + ' eliminado', 'warn');
     setDeleting(null);
@@ -268,4 +276,4 @@ function Clases({ go }) {
   );
 }
 
-Object.assign(window, { Clases, ClaseDrawer, ClaseEditModal, ClaseNuevaModal, claseRoster, claseCount, clasesSource });
+Object.assign(window, { Clases, ClaseDrawer, ClaseEditModal, ClaseNuevaModal, claseRoster, claseCount, clasesSource, claseCleanList, claseIsSeed });
