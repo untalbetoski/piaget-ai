@@ -1,21 +1,35 @@
 /* views_clases.jsx — Vista Clases + drawer de alumnos + modal de edición */
 
+function claseRoster(c) {
+  try { return (window.alumnosDeClase ? alumnosDeClase(c) : []).filter(Boolean); }
+  catch (e) { return []; }
+}
+function claseCount(c) { return claseRoster(c).length; }
+function clasesSource() {
+  const base = (window.DB && Array.isArray(DB.clases)) ? DB.clases : [];
+  try { return window.docClases ? window.docClases(base) : base; }
+  catch (e) { return base; }
+}
+
 /* ---------- Modal: editar datos de la clase ---------- */
 function ClaseEditModal({ clase, onClose }) {
   const open = !!clase;
-  const [form, setForm] = React.useState({ titular: '', salon: '', alumnos: 0 });
+  const [form, setForm] = React.useState({ titular: '', salon: '' });
   React.useEffect(() => {
-    if (clase) setForm({ titular: clase.titular || '', salon: clase.salon || '', alumnos: clase.alumnos });
+    if (clase) setForm({ titular: clase.titular || '', salon: clase.salon || '' });
   }, [clase]);
   if (!open) return null;
   const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
   const save = () => {
-    Store.update('clases', clase._id, { titular: form.titular.trim(), salon: form.salon.trim(), alumnos: Math.max(1, parseInt(form.alumnos, 10) || clase.alumnos) });
+    const n = claseCount(clase);
+    Store.update('clases', clase._id, { titular: form.titular.trim(), salon: form.salon.trim(), alumnos: n, asistencia: n ? (clase.asistencia || 100) : 0, avg: n ? clase.avg : null });
     Store.log(DB.user.name, 'actualizó los datos del grupo ' + clase.g, 'edit');
     toast('Datos del grupo ' + clase.g + ' actualizados', 'ok');
     onClose();
   };
-  const docentes = [...new Set([form.titular, ...DB.staff.filter(s => s.role.startsWith('Docente')).map(s => 'Mtra. ' + s.name), 'Mtra. Paola Rivas', 'Mtro. Jorge Patiño'].filter(Boolean))];
+  const staffDocentes = (DB.staff || []).filter(s => String(s.role || '').startsWith('Docente')).map(s => 'Mtra. ' + s.name);
+  const rosterDocentes = (() => { try { return (window.docBuildRoster ? window.docBuildRoster() : []).map(d => (d.titulo ? d.titulo + ' ' : '') + d.name); } catch (e) { return []; } })();
+  const docentes = [...new Set([form.titular, ...staffDocentes, ...rosterDocentes, 'Mtra. Paola Rivas', 'Mtro. Jorge Patiño'].filter(Boolean))];
   return (
     <Modal open={open} title={'Editar grupo ' + clase.g} onClose={onClose} width={460}
       footer={<>
@@ -26,12 +40,9 @@ function ClaseEditModal({ clase, onClose }) {
         <TextInput value={form.titular} onChange={set('titular')} list="docentes-dl" placeholder="Sin asignar por ahora" />
         <datalist id="docentes-dl">{docentes.map(d => <option key={d} value={d} />)}</datalist>
       </Field>
-      <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-        <Field label="Salón"><TextInput value={form.salon} onChange={set('salon')} /></Field>
-        <Field label="Alumnos inscritos"><NumberInput value={form.alumnos} min={1} max={40} onChange={set('alumnos')} /></Field>
-      </div>
+      <Field label="Salón"><TextInput value={form.salon} onChange={set('salon')} /></Field>
       <div className="row center gap-8 faint" style={{ fontSize: 12.5 }}>
-        <Icon name="alert" size={14} />El docente titular puede quedar pendiente y asignarse después desde el alta o edición de docentes.
+        <Icon name="alert" size={14} />Los alumnos del grupo se calculan únicamente desde estudiantes dados de alta en Académico.
       </div>
     </Modal>
   );
@@ -53,9 +64,13 @@ function ClaseDrawer({ claseId, onClose, onEdit }) {
   if (c) {
     const cfg = nivelCfg(c.nivel);
     const t = window.TONE[cfg.tone];
-    const roster = alumnosDeClase(c).filter(a => a.name.toLowerCase().includes(q.toLowerCase()));
+    const rosterAll = claseRoster(c);
+    const roster = rosterAll.filter(a => String(a.name || '').toLowerCase().includes(q.toLowerCase()));
     const titular = String(c.titular || '').trim();
     const titularLabel = titular || 'Sin docente titular asignado';
+    const avgReal = rosterAll.filter(a => a.avg != null);
+    const avgLabel = avgReal.length ? (avgReal.reduce((a, s) => a + Number(s.avg || 0), 0) / avgReal.length).toFixed(1) : '—';
+    const asisLabel = rosterAll.length ? Math.round(rosterAll.reduce((a, s) => a + Number(s.asis || 0), 0) / rosterAll.length) + '%' : '—';
     body = (
       <>
         <div className="row center between" style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
@@ -83,7 +98,7 @@ function ClaseDrawer({ claseId, onClose, onEdit }) {
           </div>
 
           <div className="grid" style={{ gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
-            {[['Alumnos', String(c.alumnos)], [c.avg != null ? 'Promedio' : 'Nivel', c.avg != null ? c.avg.toFixed(1) : c.nivel], ['Asistencia', c.asistencia + '%']].map(([l, v]) => (
+            {[['Alumnos reales', String(rosterAll.length)], ['Promedio', avgLabel], ['Asistencia', asisLabel]].map(([l, v]) => (
               <div key={l} className="card pad" style={{ padding: '12px 14px' }}>
                 <div className="kpi-label" style={{ marginBottom: 2 }}>{l}</div>
                 <div className="tnum" style={{ fontWeight: 700, fontSize: 18, fontFamily: 'var(--font-display)' }}>{v}</div>
@@ -94,21 +109,21 @@ function ClaseDrawer({ claseId, onClose, onEdit }) {
           <div>
             <div className="row between center" style={{ marginBottom: 10 }}>
               <div className="card-title"><Icon name="users" className="ico" size={16} />Alumnos del grupo</div>
-              <span className="faint tnum" style={{ fontSize: 12 }}>{roster.length} de {c.alumnos}</span>
+              <span className="faint tnum" style={{ fontSize: 12 }}>{roster.length} de {rosterAll.length}</span>
             </div>
             <input className="inp" style={{ height: 36, marginBottom: 10, width: '100%' }} placeholder="Buscar alumno…" value={q} onChange={e => setQ(e.target.value)} />
             <div>
               {roster.map((a, i) => (
-                <div key={a.name + i} className="row center gap-10" style={{ padding: '8px 0', borderBottom: i < roster.length - 1 ? '1px solid var(--border)' : 'none' }}>
+                <div key={(a.sid || a.name) + i} className="row center gap-10" style={{ padding: '8px 0', borderBottom: i < roster.length - 1 ? '1px solid var(--border)' : 'none' }}>
                   <Avatar name={a.name} size={30} />
                   <div className="grow" style={{ minWidth: 0 }}>
                     <div style={{ fontSize: 13, fontWeight: 600 }}>{a.name}</div>
                     <div className="faint" style={{ fontSize: 11.5 }}>Asistencia {a.asis}%</div>
                   </div>
-                  {a.avg != null && <span className="tnum" style={{ fontSize: 13, fontWeight: 600, color: a.avg < 7.5 ? 'var(--amber)' : 'var(--text)' }}>{a.avg.toFixed(1)}</span>}
+                  {a.avg != null && <span className="tnum" style={{ fontSize: 13, fontWeight: 600, color: a.avg < 7.5 ? 'var(--amber)' : 'var(--text)' }}>{Number(a.avg).toFixed(1)}</span>}
                 </div>
               ))}
-              {roster.length === 0 && <div className="faint" style={{ fontSize: 13, padding: '14px 0', textAlign: 'center' }}>Sin coincidencias para “{q}”.</div>}
+              {roster.length === 0 && <div className="faint" style={{ fontSize: 13, padding: '14px 0', textAlign: 'center' }}>Sin alumnos reales en este grupo.</div>}
             </div>
           </div>
         </div>
@@ -125,18 +140,20 @@ function ClaseDrawer({ claseId, onClose, onEdit }) {
 
 /* ---------- Modal: nueva clase (titular opcional; puede asignarse desde Docentes) ---------- */
 function ClaseNuevaModal({ open, onClose }) {
-  const [form, setForm] = React.useState({ nivel: 'Primaria', g: '', titular: '', salon: '', alumnos: 25 });
-  React.useEffect(() => { if (open) setForm({ nivel: 'Primaria', g: '', titular: '', salon: '', alumnos: 25 }); }, [open]);
+  const [form, setForm] = React.useState({ nivel: 'Primaria', g: '', titular: '', salon: '' });
+  React.useEffect(() => { if (open) setForm({ nivel: 'Primaria', g: '', titular: '', salon: '' }); }, [open]);
   if (!open) return null;
-  const docentes = (window.docBuildRoster ? window.docBuildRoster() : []);
+  const docentes = (() => { try { return (window.docBuildRoster ? window.docBuildRoster() : []); } catch (e) { return []; } })();
   const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
   function save() {
     const grupo = form.g.trim();
     const titular = form.titular.trim();
     if (!grupo) { toast('Escribe el nombre del grupo', 'warn'); return; }
-    Store.add('clases', { nivel: form.nivel, g: grupo, titular, salon: form.salon.trim() || '—', alumnos: Math.max(1, parseInt(form.alumnos, 10) || 25), asistencia: 95, avg: form.nivel === 'Preescolar' ? null : 8.2 });
+    const exists = (DB.clases || []).some(c => String(c.nivel || '') === form.nivel && String(c.g || '').trim().toLowerCase() === grupo.toLowerCase());
+    if (exists) { toast('Ya existe un grupo con ese nombre en ' + form.nivel, 'warn'); return; }
+    Store.add('clases', { nivel: form.nivel, g: grupo, titular, salon: form.salon.trim() || '—', alumnos: 0, asistencia: 0, avg: null, createdManual: true });
     Store.log(DB.user.name, 'creó el grupo ' + grupo + ' (' + form.nivel + ')' + (titular ? ' con titular ' + titular : ' sin docente titular asignado'), 'plus');
-    toast('Grupo ' + grupo + ' creado' + (titular ? ' · ligado a ' + titular : ' · sin docente titular por ahora') + ' ✓');
+    toast('Grupo ' + grupo + ' creado · sin alumnos hasta dar de alta estudiantes ✓');
     onClose();
   }
   return (
@@ -151,10 +168,8 @@ function ClaseNuevaModal({ open, onClose }) {
           options={[{ value: '', label: 'Sin asignar por ahora' }, ...docentes.map(dd => { const full = (dd.titulo ? dd.titulo + ' ' : '') + dd.name; return { value: full, label: full + ' · ' + (dd.niveles || []).join('/') }; })]} />
       </Field>
       <div className="faint" style={{ fontSize: 11.5, marginTop: -4, marginBottom: 4 }}>Opcional. Puedes crear el grupo ahora y asignar el docente titular después desde el alta o edición de docentes.</div>
-      <div className="field-row">
-        <Field label="Salón"><TextInput value={form.salon} onChange={set('salon')} placeholder="A-101" /></Field>
-        <Field label="Alumnos"><NumberInput value={form.alumnos} min={1} max={40} onChange={set('alumnos')} /></Field>
-      </div>
+      <Field label="Salón"><TextInput value={form.salon} onChange={set('salon')} placeholder="A-101" /></Field>
+      <div className="row center gap-8 faint" style={{ fontSize: 12.5 }}><Icon name="alert" size={14} />Crear un grupo no genera alumnos. Los estudiantes se agregan desde Académico.</div>
     </Modal>
   );
 }
@@ -177,15 +192,15 @@ function Clases({ go }) {
     if (detailId === c._id) setDetailId(null);
   }
 
-  const all = window.docClases(DB.clases || []);
-  const totalAlumnos = all.reduce((a, c) => a + c.alumnos, 0);
+  const all = clasesSource();
+  const totalAlumnos = all.reduce((a, c) => a + claseCount(c), 0);
   const niveles = NIVELES_CFG
     .map(cfg => ({ ...cfg, grupos: all.filter(c => c.nivel === cfg.id) }))
     .filter(l => l.grupos.length && (nivel === 'todos' || l.id === nivel));
 
   return (
     <div className="content-inner">
-      <PageHead eyebrow="Principal" title="Clases" desc={'3 niveles · ' + all.length + ' grupos · ' + totalAlumnos.toLocaleString('es-MX') + ' alumnos · ciclo ' + (window.PIAGET_CYCLE ? PIAGET_CYCLE() : '2025–2026')}>
+      <PageHead eyebrow="Principal" title="Clases" desc={'3 niveles · ' + all.length + ' grupos · ' + totalAlumnos.toLocaleString('es-MX') + ' alumnos reales · ciclo ' + (window.PIAGET_CYCLE ? PIAGET_CYCLE() : '2025–2026')}>
         <button className="btn primary" onClick={() => setCreating(true)}><Icon name="plus" size={15} className="btn-ico" />Nueva clase</button>
       </PageHead>
 
@@ -201,28 +216,24 @@ function Clases({ go }) {
       <div className="col" style={{ gap: 26 }}>
         {niveles.map((l) => {
           const t = window.TONE[l.tone];
-          const alumnos = l.grupos.reduce((a, g) => a + g.alumnos, 0);
-          const conAvg = l.grupos.filter(g => g.avg != null);
-          const avgNivel = conAvg.length ? (conAvg.reduce((a, g) => a + g.avg, 0) / conAvg.length).toFixed(1) : null;
-          const asisNivel = Math.round(l.grupos.reduce((a, g) => a + g.asistencia, 0) / l.grupos.length);
+          const alumnos = l.grupos.reduce((a, g) => a + claseCount(g), 0);
           return (
             <section key={l.id}>
               <div className="row center gap-10" style={{ marginBottom: 12 }}>
                 <div className="kpi-ico" style={{ background: t.bg, color: t.c, marginBottom: 0, width: 32, height: 32 }}><Icon name={l.icon} size={17} /></div>
                 <span style={{ fontWeight: 700, fontSize: 16, fontFamily: 'var(--font-display)' }}>{l.id}</span>
-                <span className="faint" style={{ fontSize: 12.5 }}>
-                  {l.grupos.length} grupos · {alumnos} alumnos · {avgNivel ? 'promedio ' + avgNivel : 'asistencia ' + asisNivel + '%'}
-                </span>
+                <span className="faint" style={{ fontSize: 12.5 }}>{l.grupos.length} grupos · {alumnos} alumnos reales</span>
               </div>
               <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))' }}>
                 {l.grupos.map((c) => {
                   const titular = String(c.titular || '').trim();
+                  const n = claseCount(c);
                   return (
                     <div className="card pad clickable" key={c._id} onClick={() => setDetailId(c._id)} style={{ display: 'flex', flexDirection: 'column', gap: 11, cursor: 'pointer' }}>
                       <div className="row between center">
                         <div className="kpi-ico" style={{ background: t.bg, color: t.c, marginBottom: 0 }}><Icon name={l.icon} size={18} /></div>
                         <div className="row center gap-6" onClick={(e) => e.stopPropagation()}>
-                          <span className="faint font-mono" style={{ fontSize: 11 }}>{c.alumnos} alumnos</span>
+                          <span className="faint font-mono" style={{ fontSize: 11 }}>{n} alumnos</span>
                           <RowMenu items={[
                             { icon: 'edit', label: 'Editar datos', onClick: () => setEditing(c) },
                             { icon: 'trash', label: 'Eliminar clase', danger: true, onClick: () => setDeleting(c) },
@@ -234,8 +245,8 @@ function Clases({ go }) {
                         <div className="faint" style={{ fontSize: 12, marginTop: 2 }}>{titular || 'Sin docente titular'} · Salón {c.salon}</div>
                       </div>
                       <div className="row between center" style={{ paddingTop: 10, borderTop: '1px solid var(--border)' }}>
-                        <span className="faint" style={{ fontSize: 12 }}>{c.avg != null ? 'Promedio' : 'Asistencia'}</span>
-                        <span className="tnum" style={{ fontWeight: 600 }}>{c.avg != null ? c.avg.toFixed(1) : c.asistencia + '%'}</span>
+                        <span className="faint" style={{ fontSize: 12 }}>Alumnos reales</span>
+                        <span className="tnum" style={{ fontWeight: 600 }}>{n}</span>
                       </div>
                     </div>
                   );
@@ -257,4 +268,4 @@ function Clases({ go }) {
   );
 }
 
-Object.assign(window, { Clases, ClaseDrawer, ClaseEditModal });
+Object.assign(window, { Clases, ClaseDrawer, ClaseEditModal, ClaseNuevaModal, claseRoster, claseCount, clasesSource });
