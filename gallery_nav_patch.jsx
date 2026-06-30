@@ -1,9 +1,9 @@
-/* gallery_nav_patch.jsx — agrega Galería a Comunicación y carga parche de firma */
+/* gallery_nav_patch.jsx — agrega Galería a Comunicación y carga parches finales */
 (function () {
-  function loadCredentialSignaturePatch() {
-    if (document.querySelector('script[src*="credential_signature_patch.js"]')) return;
+  function loadScriptOnce(src) {
+    if (document.querySelector('script[src*="' + src.split('?')[0] + '"]')) return;
     var s = document.createElement('script');
-    s.src = 'credential_signature_patch.js?v=20260629-signature';
+    s.src = src;
     s.async = false;
     document.head.appendChild(s);
   }
@@ -18,6 +18,7 @@
       }
     }));
   }
-  loadCredentialSignaturePatch();
+  loadScriptOnce('credential_signature_patch.js?v=20260629-signature');
+  loadScriptOnce('real_students_only_patch.js?v=20260629-real-students');
   addRoute();
 })();
