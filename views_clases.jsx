@@ -1,18 +1,32 @@
-/* views_clases.jsx — Vista Clases + alta robusta sin dependencias externas */
+/* views_clases.jsx — Vista Clases + alta/baja robusta sin dependencias externas */
 
 function claseUid() { return crypto.randomUUID ? crypto.randomUUID() : 'cls-real-' + Date.now() + '-' + Math.random().toString(36).slice(2); }
 function claseIsSeed(c) { return /^cls-\d+$/i.test(String((c && c._id) || '')); }
 function claseCleanText(v) { return String(v || '').trim().replace(/\s+/g, ' '); }
 function claseNormalizeGroup(g) { return claseCleanText(g).toLowerCase(); }
-function claseCleanList(list) { return (Array.isArray(list) ? list : []).filter(c => c && !claseIsSeed(c) && claseCleanText(c.g)); }
+function claseDeletedIds() { try { return (DB.settings && Array.isArray(DB.settings.deletedClassIds)) ? DB.settings.deletedClassIds : []; } catch (e) { return []; } }
+function claseMarkDeleted(id) { DB.settings = DB.settings || {}; const ids = claseDeletedIds(); if (id && ids.indexOf(id) === -1) DB.settings.deletedClassIds = [id, ...ids]; }
+function claseUnmarkDeleted(id) { DB.settings = DB.settings || {}; DB.settings.deletedClassIds = claseDeletedIds().filter(x => x !== id); }
+function claseCleanList(list) { const deleted = new Set(claseDeletedIds()); return (Array.isArray(list) ? list : []).filter(c => c && !claseIsSeed(c) && !deleted.has(c._id) && claseCleanText(c.g)); }
 function clasesSource() { return claseCleanList((window.DB && Array.isArray(DB.clases)) ? DB.clases : []); }
 function claseRoster(c) { try { return (window.alumnosDeClase ? alumnosDeClase(c) : []).filter(Boolean); } catch (e) { return []; } }
 function claseCount(c) { return claseRoster(c).length; }
 function claseSaveState() { try { if (window.Store && Store.saveState) Store.saveState(); } catch (e) {} try { window.dispatchEvent(new Event('piaget-classes-changed')); } catch (e) {} }
+function claseDeleteFromSupabase(id) {
+  try {
+    const sb = window.PIAGET_SB;
+    if (sb && id) {
+      sb.from('clases').delete().eq('id', id).then(function (res) { if (res && res.error) console.warn('[PIAGET] delete clases', res.error.message); });
+      const session = JSON.parse(localStorage.getItem('piaget_session') || 'null') || {};
+      if (session.session_token) sb.rpc('piaget_delete', { p_token: session.session_token, p_table: 'clases', p_id: id }).then(function () {});
+    }
+  } catch (e) {}
+}
 function claseAddDirect(item) {
   window.DB = window.DB || {};
   if (!Array.isArray(DB.clases)) DB.clases = [];
   const row = { _id: claseUid(), ...item, alumnos: 0, asistencia: 0, avg: null, createdManual: true, createdAt: new Date().toISOString() };
+  claseUnmarkDeleted(row._id);
   DB.clases = [row, ...claseCleanList(DB.clases)];
   claseSaveState();
   return row;
@@ -23,8 +37,12 @@ function claseUpdateDirect(id, patch) {
   claseSaveState();
 }
 function claseRemoveDirect(id) {
+  if (!id) return;
+  claseMarkDeleted(id);
+  try { if (window.Store && Store.remove) Store.remove('clases', id); } catch (e) {}
   if (!Array.isArray(DB.clases)) DB.clases = [];
   DB.clases = DB.clases.filter(c => c._id !== id);
+  claseDeleteFromSupabase(id);
   claseSaveState();
 }
 
@@ -58,6 +76,7 @@ function ClaseNuevaModal({ open, onClose }) {
     let created = null;
     try { created = window.Store && Store.add ? Store.add('clases', { ...item, alumnos: 0, asistencia: 0, avg: null, createdManual: true }) : null; } catch (e) { created = null; }
     if (!created) created = claseAddDirect(item);
+    if (created && created._id) claseUnmarkDeleted(created._id);
     claseSaveState();
     try { if (window.Store && Store.log) Store.log(DB.user && DB.user.name ? DB.user.name : 'Sistema', 'creó el grupo ' + grupo + ' (' + form.nivel + ')', 'plus'); } catch (e) {}
     toast('Grupo ' + grupo + ' creado ✓', 'ok');
@@ -97,8 +116,8 @@ function Clases() {
     <ClaseDrawer claseId={detailId} onClose={() => setDetailId(null)} onEdit={c => setEditing(c)} />
     <ClaseNuevaModal open={creating} onClose={() => { setCreating(false); force(x => x + 1); }} />
     <ClaseEditModal clase={editing} onClose={() => { setEditing(null); force(x => x + 1); }} />
-    {deleting && <Modal open title="Eliminar clase" onClose={() => setDeleting(null)} width={440} footer={<><button className="btn" onClick={() => setDeleting(null)}>Cancelar</button><button className="btn primary" style={{ background: 'var(--red)', borderColor: 'var(--red)' }} onClick={() => { claseRemoveDirect(deleting._id); toast('Grupo eliminado', 'warn'); setDeleting(null); force(x => x + 1); }}><Icon name="trash" size={15} className="btn-ico" />Eliminar</button></>}><p style={{ fontSize: 14, lineHeight: 1.5, margin: 0 }}>Se eliminará el <b>Grupo {deleting.g}</b>. Esta acción no afecta alumnos reales.</p></Modal>}
+    {deleting && <Modal open title="Eliminar clase" onClose={() => setDeleting(null)} width={440} footer={<><button className="btn" onClick={() => setDeleting(null)}>Cancelar</button><button className="btn primary" style={{ background: 'var(--red)', borderColor: 'var(--red)' }} onClick={() => { claseRemoveDirect(deleting._id); toast('Grupo eliminado de la base central', 'warn'); setDeleting(null); force(x => x + 1); }}><Icon name="trash" size={15} className="btn-ico" />Eliminar</button></>}><p style={{ fontSize: 14, lineHeight: 1.5, margin: 0 }}>Se eliminará el <b>Grupo {deleting.g}</b>. Esta acción no afecta alumnos reales.</p></Modal>}
   </div>;
 }
 
-Object.assign(window, { Clases, ClaseDrawer, ClaseEditModal, ClaseNuevaModal, clasesSource, claseCount, claseCleanList, claseAddDirect });
+Object.assign(window, { Clases, ClaseDrawer, ClaseEditModal, ClaseNuevaModal, clasesSource, claseCount, claseCleanList, claseAddDirect, claseRemoveDirect });
