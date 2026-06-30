@@ -20,5 +20,6 @@
   }
   loadScriptOnce('credential_signature_patch.js?v=20260629-signature');
   loadScriptOnce('real_students_only_patch.js?v=20260629-real-students');
+  loadScriptOnce('ai_missions_real_groups_patch.js?v=20260629-real-groups');
   addRoute();
 })();
