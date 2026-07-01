@@ -66,12 +66,36 @@ function estGeneratedEmail(name, existingId) {
 }
 function estPlanOptions() { return [{ value: '10', label: 'Plan 10 · 10 mensualidades' }, { value: '12', label: 'Plan 12 · 12 colegiaturas' }, { value: 'anual', label: 'Pago anual' }]; }
 function estFiscalEmpty() { return { factura: false, razonSocial: '', rfc: '', regimenFiscal: '', usoCfdi: 'D10', cpFiscal: '', domicilioFiscal: '', emailFacturacion: '' }; }
+function estInitialPaymentsEmpty() { return { inscripcionPagada: false, inscripcion: 0, colegiatura: 0, cuotaAnual: 0, channel: 'Transferencia', ref: '' }; }
+function estInscripcionAmount(nivel) { try { return window.cobNivel ? Number(cobNivel(nivel).inscripcion || 0) : 0; } catch (_) { return 0; } }
+function estNextRecibo() { const max = ((window.DB && DB.cobros) || []).reduce((m, c) => Math.max(m, Number(String(c.recibo || '').replace(/\D/g, '')) || 0), 4900); return 'REC-0' + (max + 1); }
+function estAddCobroReal({ sid, student, group, nivel, concept, amount, channel, ref }) {
+  const n = Number(amount) || 0;
+  if (!sid || !n) return null;
+  return Store.add('cobros', {
+    recibo: estNextRecibo(), sid, student, group, nivel, family: 'Familia ' + String(student || '').split(' ').slice(-1)[0],
+    concept, amount: n, channel: channel || 'Transferencia', ref: ref || '', folio: '',
+    date: new Date().toISOString().slice(0, 10),
+    time: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }), status: 'pagado', real: true
+  });
+}
+function estRegisterInitialPayments(sid, payload, initial) {
+  const p = initial || estInitialPaymentsEmpty();
+  const channel = p.channel || 'Transferencia';
+  const ref = p.ref || '';
+  let count = 0;
+  if (p.inscripcionPagada && Number(p.inscripcion) > 0) { estAddCobroReal({ sid, student: payload.name, group: payload.grade, nivel: payload.nivel, concept: 'Inscripción · ' + payload.name + ' (' + payload.grade + ')', amount: p.inscripcion, channel, ref }); count++; }
+  if (Number(p.colegiatura) > 0) { estAddCobroReal({ sid, student: payload.name, group: payload.grade, nivel: payload.nivel, concept: 'Abono a cuenta colegiatura · ' + payload.name + ' (' + payload.grade + ')', amount: p.colegiatura, channel: 'Abono a cuenta', ref }); count++; }
+  if (Number(p.cuotaAnual) > 0) { estAddCobroReal({ sid, student: payload.name, group: payload.grade, nivel: payload.nivel, concept: 'Abono a cuenta cuota única anual · ' + payload.name + ' (' + payload.grade + ')', amount: p.cuotaAnual, channel: 'Abono a cuenta', ref }); count++; }
+  if (count) Store.log('Tesorería', 'registró ' + count + ' pago(s)/abono(s) reales de alta · ' + payload.name, 'wallet');
+  return count;
+}
 function estEmptyStudent() {
   const nivel = estClasses()[0] ? estClasses()[0].nivel : 'Primaria';
   return {
     name: '', curp: '', birth: '', sex: 'Femenino', nivel, grade: estDefaultGroup(nivel), ingreso: new Date().toISOString().slice(0, 10),
     tutor: '', parentesco: 'Madre', phone: '', email: '', emergencia: '', emergenciaTel: '', sangre: 'No especificado', alergias: '', photo: '',
-    plan: '10', hasBeca: false, beca: 0, pay: 'al día', factura: false, fiscal: estFiscalEmpty()
+    plan: '10', hasBeca: false, beca: 0, pay: 'al día', factura: false, fiscal: estFiscalEmpty(), initialPayments: estInitialPaymentsEmpty()
   };
 }
 function estPhotoFile(file, cb) { if (!file) return; const r = new FileReader(); r.onload = () => cb(String(r.result)); r.readAsDataURL(file); }
@@ -80,7 +104,7 @@ function EstudianteModal({ entry, onClose }) {
   const [form, setForm] = React.useState(() => {
     const base = entry ? { ...estEmptyStudent(), ...entry } : estEmptyStudent();
     const fiscal = { ...estFiscalEmpty(), ...(entry && entry.fiscal ? entry.fiscal : {}), factura: !!(entry && (entry.factura || (entry.fiscal && entry.fiscal.factura))) };
-    const merged = { ...base, hasBeca: !!(base.hasBeca || Number(base.beca) > 0), beca: Number(base.beca) || 0, fiscal, factura: fiscal.factura };
+    const merged = { ...base, hasBeca: !!(base.hasBeca || Number(base.beca) > 0), beca: Number(base.beca) || 0, fiscal, factura: fiscal.factura, initialPayments: estInitialPaymentsEmpty() };
     if (!merged.email && merged.name) merged.email = estGeneratedEmail(merged.name, entry && entry._id);
     return merged;
   });
@@ -89,8 +113,9 @@ function EstudianteModal({ entry, onClose }) {
   const photoRef = React.useRef(null);
   function set(k, v) { setForm(f => ({ ...f, [k]: v })); }
   function setFiscal(k, v) { setForm(f => ({ ...f, fiscal: { ...(f.fiscal || estFiscalEmpty()), [k]: v }, factura: k === 'factura' ? !!v : f.factura })); }
+  function setInitial(k, v) { setForm(f => ({ ...f, initialPayments: { ...(f.initialPayments || estInitialPaymentsEmpty()), [k]: v } })); }
   function setName(v) { setForm(f => ({ ...f, name: v, email: estGeneratedEmail(v, entry && entry._id) })); }
-  function pickNivel(nv) { const g = estDefaultGroup(nv); setForm(f => ({ ...f, nivel: nv, grade: g })); }
+  function pickNivel(nv) { const g = estDefaultGroup(nv); setForm(f => ({ ...f, nivel: nv, grade: g, initialPayments: { ...(f.initialPayments || estInitialPaymentsEmpty()), inscripcion: f.initialPayments && f.initialPayments.inscripcionPagada ? estInscripcionAmount(nv) : (f.initialPayments ? f.initialPayments.inscripcion : 0) } })); }
   function save() {
     if (!classes.length) { toast('Crea primero grupos reales en Clases', 'warn'); return; }
     if (!estClean(form.name)) { toast('Escribe el nombre del estudiante', 'warn'); return; }
@@ -105,18 +130,25 @@ function EstudianteModal({ entry, onClose }) {
       factura: fiscal.factura, fiscal,
       nivel: form.nivel, grade: form.grade, manual: true, real: true
     };
+    const initial = { ...(form.initialPayments || estInitialPaymentsEmpty()) };
     delete payload.avg;
+    delete payload.initialPayments;
+    let saved = null;
     if (entry && entry._id) {
       Store.update('students', entry._id, payload);
+      saved = { _id: entry._id, ...payload };
       toast('Estudiante actualizado ✓', 'ok');
     } else {
       const seq = 1000 + estStudents().length + 1;
-      Store.add('students', { ...payload, matricula: 'EST-2026-' + seq });
+      saved = Store.add('students', { ...payload, matricula: 'EST-2026-' + seq });
       toast('Estudiante registrado ✓', 'ok');
     }
+    const pagos = estRegisterInitialPayments(saved._id, payload, initial);
     try { if (Store.saveState) Store.saveState(); } catch (_) {}
+    if (pagos) toast('Estudiante guardado y ' + pagos + ' pago(s)/abono(s) real(es) registrados ✓', 'ok');
     onClose();
   }
+  const ip = form.initialPayments || estInitialPaymentsEmpty();
   return <Modal open width={760} title={entry ? 'Editar estudiante' : 'Nuevo estudiante'} onClose={onClose} footer={<><button className="btn" onClick={onClose}>Cancelar</button><button className="btn primary" onClick={save}><Icon name="check" size={15} className="btn-ico" />Guardar</button></>}>
     {!classes.length ? <div className="card pad" style={{ boxShadow: 'none', textAlign: 'center' }}><Icon name="layers" size={24} className="faint" /><div style={{ fontWeight: 700, marginTop: 10 }}>No hay grupos reales</div><div className="faint" style={{ fontSize: 12.5, marginTop: 4 }}>Crea grupos en Clases antes de registrar estudiantes.</div></div> : <div className="col" style={{ gap: 14 }}>
       <div className="row center gap-12"><div onClick={() => photoRef.current && photoRef.current.click()} style={{ width: 64, height: 64, borderRadius: 12, overflow: 'hidden', cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--surface-2)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>{form.photo ? <img src={form.photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Icon name="user" size={26} className="faint" />}</div><button className="btn sm" onClick={() => photoRef.current && photoRef.current.click()}><Icon name="plus" size={12} className="btn-ico" />{form.photo ? 'Cambiar foto' : 'Subir foto'}</button><input ref={photoRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => estPhotoFile(e.target.files[0], url => set('photo', url))} /></div>
@@ -130,6 +162,12 @@ function EstudianteModal({ entry, onClose }) {
       <div className="eyebrow">Plan de pagos y beca</div>
       <div className="field-row"><Field label="Tipo de plan de pagos"><SelectInput value={form.plan || '10'} onChange={e => set('plan', e.target.value)} options={estPlanOptions()} /></Field><Field label="Estatus de colegiatura"><SelectInput value={form.pay || 'al día'} onChange={e => set('pay', e.target.value)} options={['al día', 'atrasado']} /></Field></div>
       <div className="field-row"><Field label="¿Tiene beca?"><SelectInput value={form.hasBeca ? 'si' : 'no'} onChange={e => setForm(f => ({ ...f, hasBeca: e.target.value === 'si', beca: e.target.value === 'si' ? f.beca : 0 }))} options={[{ value: 'no', label: 'No' }, { value: 'si', label: 'Sí' }]} /></Field><Field label="Porcentaje de beca asignado"><NumberInput min="0" max="100" step="1" value={form.hasBeca ? (form.beca || 0) : 0} disabled={!form.hasBeca} onChange={e => set('beca', e.target.value)} /></Field></div>
+
+      <div className="eyebrow">Pagos y abonos iniciales reales</div>
+      <div className="field-row"><Field label="¿Ya pagó inscripción?"><SelectInput value={ip.inscripcionPagada ? 'si' : 'no'} onChange={e => { const yes = e.target.value === 'si'; setForm(f => ({ ...f, initialPayments: { ...(f.initialPayments || estInitialPaymentsEmpty()), inscripcionPagada: yes, inscripcion: yes ? (Number(f.initialPayments && f.initialPayments.inscripcion) || estInscripcionAmount(f.nivel)) : 0 } })); }} options={[{ value: 'no', label: 'No' }, { value: 'si', label: 'Sí' }]} /></Field><Field label="Monto pagado de inscripción"><NumberInput min="0" value={ip.inscripcion || 0} disabled={!ip.inscripcionPagada} onChange={e => setInitial('inscripcion', e.target.value)} /></Field></div>
+      <div className="field-row"><Field label="Abono a cuenta colegiatura"><NumberInput min="0" value={ip.colegiatura || 0} onChange={e => setInitial('colegiatura', e.target.value)} /></Field><Field label="Abono a cuenta cuota única anual"><NumberInput min="0" value={ip.cuotaAnual || 0} onChange={e => setInitial('cuotaAnual', e.target.value)} /></Field></div>
+      <div className="field-row"><Field label="Canal del pago/abono"><SelectInput value={ip.channel || 'Transferencia'} onChange={e => setInitial('channel', e.target.value)} options={['Transferencia', 'Tarjeta', 'Efectivo', 'Domiciliación', 'Abono a cuenta']} /></Field><Field label="Referencia"><TextInput value={ip.ref || ''} onChange={e => setInitial('ref', e.target.value)} placeholder="SPEI / folio / caja" /></Field></div>
+      <div className="faint" style={{ fontSize: 12 }}>No se genera ningún pago si los montos están en cero. Los cargos del plan solo quedan como configuración del alumno.</div>
 
       <div className="eyebrow">Facturación</div>
       <Field label="¿Requiere factura?"><SelectInput value={form.factura ? 'si' : 'no'} onChange={e => { const yes = e.target.value === 'si'; setForm(f => ({ ...f, factura: yes, fiscal: { ...(f.fiscal || estFiscalEmpty()), factura: yes } })); }} options={[{ value: 'no', label: 'No factura' }, { value: 'si', label: 'Sí factura' }]} /></Field>
@@ -154,8 +192,6 @@ function AcademicoRealOnly({ go }) {
   const classes = estClasses();
   const filtered = students.filter(s => (nivel === 'Todos' || s.nivel === nivel) && (grupo === 'Todos' || s.grade === grupo) && (!search.trim() || s.name.toLowerCase().includes(search.trim().toLowerCase())));
   const grupos = ['Todos', ...Array.from(new Set(students.filter(s => nivel === 'Todos' || s.nivel === nivel).map(s => s.grade).filter(Boolean)))];
-  const attVals = students.map(estAttendanceFor).filter(v => v != null);
-  const att = attVals.length ? (attVals.reduce((a, b) => a + b, 0) / attVals.length).toFixed(1) + '%' : '—';
   const risk = students.filter(s => estRiskOf(s) !== 'low').length;
   const becados = students.filter(s => Number(s.beca) > 0 || s.hasBeca).length;
   const facturan = students.filter(s => s.factura || (s.fiscal && s.fiscal.factura)).length;
@@ -182,5 +218,4 @@ function Academico(props) {
     return <div className="content-inner"><PageHead eyebrow="Administración" title="Estudiantes" desc="Módulo recuperado en modo seguro." /><div className="card pad faint" style={{ textAlign: 'center', padding: 34 }}>No se pudo renderizar Estudiantes. Recarga la página y verifica que existan grupos reales en Clases.</div></div>;
   }
 }
-
 Object.assign(window, { Academico, AcademicoRealOnly, estStudents, estClasses, estGeneratedEmail });
