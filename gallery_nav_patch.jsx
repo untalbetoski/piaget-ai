@@ -38,6 +38,8 @@
   loadScriptOnce('ai_missions_real_groups_patch.js?v=20260629-real-groups');
   loadBabelForce('evaluaciones_data.jsx?v=20260630-real-evals');
   loadBabelForce('views_evaluaciones.jsx?v=20260630-real-evals');
+  loadBabelForce('asistencia_data.jsx?v=20260630-real-attendance');
+  loadBabelForce('views_asistencia.jsx?v=20260630-real-attendance');
   loadBabelForce('views_clases.jsx?v=20260630-delete-persist');
   loadBabelForce('views_docentes.jsx?v=20260630-real-only');
   loadBabelOnce('config_users_safe_patch.jsx?v=20260630-safe-users');
