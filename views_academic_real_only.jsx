@@ -48,7 +48,7 @@ function estRiskOf(s) {
 function estRiskBadge(r) { if (r === 'high') return <Badge tone="red" dot>Riesgo alto</Badge>; if (r === 'mid') return <Badge tone="amber" dot>Medio</Badge>; return <Badge tone="green" dot>Estable</Badge>; }
 function estGroupsByNivel(nivel) { return estClasses().filter(c => !nivel || nivel === 'Todos' || c.nivel === nivel).map(c => c.g); }
 function estDefaultGroup(nivel) { return estGroupsByNivel(nivel)[0] || ''; }
-function estEmailDomain() { try { return DB.settings.emailDomain || DB.settings.studentEmailDomain || 'soypiaget.app'; } catch (_) { return 'soypiaget.app'; } }
+function estEmailDomain() { return 'jeanpiaget.mx'; }
 function estSlug(v) { return estClean(v).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ñ/g, 'n').replace(/[^a-z0-9]/g, ''); }
 function estGeneratedEmail(name, existingId) {
   const p = estClean(name).split(' ').filter(Boolean);
