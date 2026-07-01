@@ -43,6 +43,6 @@
   loadBabelForce('views_diario.jsx?v=20260630-real-diario');
   loadBabelForce('views_clases.jsx?v=20260630-delete-persist');
   loadBabelForce('views_docentes.jsx?v=20260630-real-only');
-  loadBabelOnce('config_users_safe_patch.jsx?v=20260630-safe-users');
+  loadBabelForce('config_users_safe_patch.jsx?v=20260701-safe-users-required-fn');
   addRoute();
 })();
