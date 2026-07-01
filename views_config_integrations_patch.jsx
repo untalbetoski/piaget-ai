@@ -1,10 +1,9 @@
 /* views_config_integrations_patch.jsx — Integraciones reales y carga de Seguridad limpia */
 (function () {
   function loadSecurityClean() {
-    if (document.querySelector('script[src*="config_security_real_only_patch.jsx"]')) return;
+    if (document.querySelector('script[src*="config_security_real_only_patch.js"]')) return;
     var s = document.createElement('script');
-    s.type = 'text/babel';
-    s.src = 'config_security_real_only_patch.jsx?v=20260701-real-security-no-sso';
+    s.src = 'config_security_real_only_patch.js?v=20260701-real-security-js';
     s.async = false;
     document.head.appendChild(s);
   }
