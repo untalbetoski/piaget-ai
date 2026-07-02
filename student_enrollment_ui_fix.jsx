@@ -1,41 +1,139 @@
 /* student_enrollment_ui_fix.jsx — ajuste directo del alta de estudiantes */
 
+function estStudentCredentialPayload(stu) {
+  return {
+    type: 'student',
+    id: stu._id || '',
+    matricula: stu.matricula || '',
+    name: stu.name || '',
+    email: stu.email || '',
+    nivel: stu.nivel || '',
+    grade: stu.grade || stu.group || '',
+    curp: stu.curp || '',
+    institution: 'PIAGET',
+    v: 2
+  };
+}
+function estCredentialQR(payload) {
+  try {
+    if (!window.qrcode) return '';
+    const q = window.qrcode(0, 'M');
+    q.addData(JSON.stringify(payload));
+    q.make();
+    return q.createSvgTag(5, 2);
+  } catch (_) { return ''; }
+}
+function estEnsureStudentCredentialPrintStyles() {
+  if (document.getElementById('piaget-student-credential-print')) return;
+  const style = document.createElement('style');
+  style.id = 'piaget-student-credential-print';
+  style.textContent = `
+    @media print {
+      html, body { overflow: visible !important; background: #fff !important; height: auto !important; }
+      body * { visibility: hidden !important; }
+      .student-cred-print, .student-cred-print * { visibility: visible !important; }
+      .student-cred-print {
+        position: fixed !important;
+        left: 50% !important;
+        top: 20px !important;
+        transform: translateX(-50%) !important;
+        width: 330px !important;
+        max-width: 330px !important;
+        box-shadow: none !important;
+        background: #fff !important;
+        color: #111827 !important;
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      .student-cred-print svg { max-width: 100% !important; height: auto !important; }
+      .student-cred-print img { print-color-adjust: exact !important; -webkit-print-color-adjust: exact !important; }
+    }
+  `;
+  document.head.appendChild(style);
+}
+function StudentCredentialCard({ student }) {
+  React.useEffect(() => { estEnsureStudentCredentialPrintStyles(); }, []);
+  const payload = estStudentCredentialPayload(student || {});
+  const svg = React.useMemo(() => estCredentialQR(payload), [student && student._id, student && student.email, student && student.matricula]);
+  const tone = window.TONE && window.TONE.blue ? window.TONE.blue : { c: 'var(--accent)', bg: 'var(--accent-soft)' };
+  return <div className="card student-cred-print" style={{ width: 330, overflow: 'hidden', border: '1px solid var(--border)', boxShadow: 'var(--shadow-lg)' }}>
+    <div style={{ padding: 18, background: 'linear-gradient(135deg, var(--surface), var(--surface-2))', borderBottom: '1px solid var(--border)' }}>
+      <div className="row between center">
+        <div><div className="eyebrow">Credencial de estudiante</div><div style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 700, letterSpacing: '-0.03em' }}>PIAGET</div></div>
+        <Badge tone="green" dot>Activa</Badge>
+      </div>
+    </div>
+    <div style={{ padding: 20 }}>
+      <div className="row center gap-12" style={{ marginBottom: 16 }}>
+        <div style={{ width: 62, height: 62, borderRadius: 18, overflow: 'hidden', display: 'grid', placeItems: 'center', color: tone.c, background: tone.bg, fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 20, flexShrink: 0 }}>
+          {student && student.photo ? <img src={student.photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span>{String(student && student.name || 'E').split(' ').map(x => x[0]).slice(0, 2).join('').toUpperCase()}</span>}
+        </div>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontWeight: 700, fontSize: 16, lineHeight: 1.1 }}>{student && student.name || 'Estudiante'}</div>
+          <div className="faint" style={{ fontSize: 12.5, marginTop: 3 }}>{student && student.email || '—'}</div>
+          <div style={{ marginTop: 7 }}><Badge tone="blue">{student && student.nivel || 'Estudiante'}</Badge></div>
+        </div>
+      </div>
+      <div style={{ display: 'grid', placeItems: 'center', background: '#fff', borderRadius: 18, padding: 14, border: '1px solid var(--border)' }}>
+        {svg ? <div style={{ width: 210, height: 210, display: 'grid', placeItems: 'center' }} dangerouslySetInnerHTML={{ __html: svg }} /> : <div className="faint" style={{ height: 210, display: 'grid', placeItems: 'center' }}>QR no disponible</div>}
+      </div>
+      <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 14 }}>
+        <div className="kv"><span className="k">Matrícula</span><span className="v font-mono" style={{ fontSize: 10.5 }}>{student && student.matricula || '—'}</span></div>
+        <div className="kv"><span className="k">Grupo</span><span className="v">{student && (student.grade || student.group) || '—'}</span></div>
+        <div className="kv"><span className="k">Nivel</span><span className="v">{student && student.nivel || '—'}</span></div>
+        <div className="kv"><span className="k">Tipo</span><span className="v">Estudiante</span></div>
+      </div>
+      <div className="faint" style={{ fontSize: 11.5, marginTop: 12, textAlign: 'center' }}>Este QR registra entrada en Control de Accesos.</div>
+    </div>
+  </div>;
+}
+function StudentCredentialModal({ student, onClose }) {
+  const payload = estStudentCredentialPayload(student || {});
+  const copyPayload = async () => {
+    try { await navigator.clipboard.writeText(JSON.stringify(payload)); toast('Contenido QR copiado', 'ok'); }
+    catch (_) { toast('No se pudo copiar', 'warn'); }
+  };
+  return <Modal open width={760} onClose={onClose} title="Credencial de estudiante"
+    footer={<><button className="btn" onClick={onClose}>Cerrar</button><button className="btn" onClick={copyPayload}><Icon name="copy" size={15} className="btn-ico" />Copiar QR</button><button className="btn primary" onClick={() => { estEnsureStudentCredentialPrintStyles(); window.print(); }}><Icon name="download" size={15} className="btn-ico" />Imprimir</button></>}>
+    <div className="row" style={{ gap: 24, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+      <StudentCredentialCard student={student || {}} />
+      <div className="card pad" style={{ flex: 1, minWidth: 260 }}>
+        <div className="card-title" style={{ marginBottom: 10 }}><Icon name="shield" size={17} className="ico" />Uso de la credencial</div>
+        {[
+          ['Mostrar QR', 'El estudiante presenta esta credencial en el acceso.'],
+          ['Escanear', 'El módulo Scanner QR lee el código con cámara.'],
+          ['Registrar', 'La entrada queda guardada y se refleja en Accesos.']
+        ].map((p, i) => <div className="row" key={i} style={{ gap: 12, padding: '11px 0', borderBottom: i < 2 ? '1px solid var(--border)' : 'none' }}><div className="kpi-ico" style={{ width: 28, height: 28, margin: 0, background: 'var(--accent-soft)', color: 'var(--accent)', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13 }}>{i + 1}</div><div><div style={{ fontWeight: 600, fontSize: 13.5 }}>{p[0]}</div><div className="faint" style={{ fontSize: 12.5 }}>{p[1]}</div></div></div>)}
+      </div>
+    </div>
+  </Modal>;
+}
+function estPrintCredential(student) {
+  window.__piagetStudentCredential = student || {};
+  window.dispatchEvent(new CustomEvent('piaget-open-student-credential', { detail: student || {} }));
+}
+
 function EstudianteModal({ entry, onClose }) {
   const [form, setForm] = React.useState(() => {
     const base = entry ? { ...estEmptyStudent(), ...entry } : estEmptyStudent();
     const fiscal = { ...estFiscalEmpty(base), ...(base.fiscal || {}) };
     fiscal.complementoIE = { ...estFiscalEmpty(base).complementoIE, ...(fiscal.complementoIE || {}), nombreAlumno: base.name || '', curpAlumno: base.curp || '', nivelEducativo: base.nivel || '' };
-    return {
-      ...base,
-      email: base.email || estGeneratedEmail(base.name, entry && entry._id),
-      fiscal,
-      factura: !!(base.factura || fiscal.factura),
-      hasBeca: !!base.hasBeca || Number(base.beca) > 0,
-      beca: Number(base.beca) || 0,
-      initialPayments: { inscripcionPagada: false, inscripcion: 0, cuotaAnual: 0, channel: 'Transferencia', detalle: '' },
-      accessKey: (base.access && base.access.key) || ''
-    };
+    return { ...base, email: base.email || estGeneratedEmail(base.name, entry && entry._id), fiscal, factura: !!(base.factura || fiscal.factura), hasBeca: !!base.hasBeca || Number(base.beca) > 0, beca: Number(base.beca) || 0, initialPayments: { inscripcionPagada: false, inscripcion: 0, channel: 'Transferencia', detalle: '' }, accessKey: (base.access && base.access.key) || '' };
   });
   const photoRef = React.useRef(null);
   const groups = estGroupsByNivel(form.nivel);
   const fiscal = form.fiscal || estFiscalEmpty(form);
   const ie = fiscal.complementoIE || {};
-  const ip = form.initialPayments || { inscripcionPagada: false, inscripcion: 0, cuotaAnual: 0, channel: 'Transferencia', detalle: '' };
+  const ip = form.initialPayments || { inscripcionPagada: false, inscripcion: 0, channel: 'Transferencia', detalle: '' };
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const setFiscal = (k, v) => setForm(f => ({ ...f, fiscal: { ...(f.fiscal || estFiscalEmpty(f)), [k]: v } }));
   const setIE = (k, v) => setForm(f => ({ ...f, fiscal: { ...(f.fiscal || estFiscalEmpty(f)), complementoIE: { ...((f.fiscal && f.fiscal.complementoIE) || {}), [k]: v } } }));
   const setPay = (k, v) => setForm(f => ({ ...f, initialPayments: { ...(f.initialPayments || {}), [k]: v } }));
-  function updateName(v) {
-    setForm(f => ({ ...f, name: v, email: estGeneratedEmail(v, entry && entry._id), fiscal: { ...(f.fiscal || estFiscalEmpty(f)), complementoIE: { ...((f.fiscal && f.fiscal.complementoIE) || {}), nombreAlumno: v } } }));
-  }
-  function updateCurp(v) {
-    const curp = String(v || '').toUpperCase();
-    setForm(f => ({ ...f, curp, fiscal: { ...(f.fiscal || estFiscalEmpty(f)), complementoIE: { ...((f.fiscal && f.fiscal.complementoIE) || {}), curpAlumno: curp } } }));
-  }
-  function updateNivel(v) {
-    const g = estGroupsByNivel(v)[0] || '';
-    setForm(f => ({ ...f, nivel: v, grade: g, plan: '10', fiscal: { ...(f.fiscal || estFiscalEmpty(f)), complementoIE: { ...((f.fiscal && f.fiscal.complementoIE) || {}), nivelEducativo: v } }, initialPayments: { ...(f.initialPayments || {}), inscripcion: f.initialPayments && f.initialPayments.inscripcionPagada ? estInscripcionAmount(v) : (f.initialPayments ? f.initialPayments.inscripcion : 0) } }));
-  }
+  function updateName(v) { setForm(f => ({ ...f, name: v, email: estGeneratedEmail(v, entry && entry._id), fiscal: { ...(f.fiscal || estFiscalEmpty(f)), complementoIE: { ...((f.fiscal && f.fiscal.complementoIE) || {}), nombreAlumno: v } } })); }
+  function updateCurp(v) { const curp = String(v || '').toUpperCase(); setForm(f => ({ ...f, curp, fiscal: { ...(f.fiscal || estFiscalEmpty(f)), complementoIE: { ...((f.fiscal && f.fiscal.complementoIE) || {}), curpAlumno: curp } } })); }
+  function updateNivel(v) { const g = estGroupsByNivel(v)[0] || ''; setForm(f => ({ ...f, nivel: v, grade: g, plan: '10', fiscal: { ...(f.fiscal || estFiscalEmpty(f)), complementoIE: { ...((f.fiscal && f.fiscal.complementoIE) || {}), nivelEducativo: v } }, initialPayments: { ...(f.initialPayments || {}), inscripcion: f.initialPayments && f.initialPayments.inscripcionPagada ? estInscripcionAmount(v) : (f.initialPayments ? f.initialPayments.inscripcion : 0) } })); }
   function save() {
     if (!estClean(form.name)) return toast('Escribe el nombre completo', 'warn');
     if (!form.nivel) return toast('Selecciona el nivel', 'warn');
@@ -58,9 +156,8 @@ function EstudianteModal({ entry, onClose }) {
     const acc = estUpsertStudentAccount(saved, key);
     let pays = 0;
     if (initial.inscripcionPagada && Number(initial.inscripcion) > 0) { estAddCobroReal(saved._id, saved, 'Inscripción · ' + saved.name + ' (' + saved.grade + ')', initial.inscripcion, initial.channel, initial.detalle); pays++; }
-    if (Number(initial.cuotaAnual) > 0) { estAddCobroReal(saved._id, saved, 'Abono a cuenta cuota única anual · ' + saved.name + ' (' + saved.grade + ')', initial.cuotaAnual, initial.channel || 'Abono a cuenta', initial.detalle); pays++; }
     try { if (Store.saveState) Store.saveState(); } catch (_) {}
-    toast('Estudiante guardado · usuario ' + acc.email + ' · clave generada' + (pays ? ' · pagos reales: ' + pays : ''), 'ok');
+    toast('Estudiante guardado · usuario ' + acc.email + ' · clave generada' + (pays ? ' · pago real de inscripción' : ''), 'ok');
     onClose();
   }
   return <Modal open width={900} title={entry ? 'Editar estudiante' : 'Alta de nuevo estudiante'} onClose={onClose} footer={<><button className="btn" onClick={onClose}>Cancelar</button><button className="btn" onClick={() => estPrintCredential({ ...form, matricula: entry && entry.matricula })}><Icon name="print" size={15} className="btn-ico" />Vista credencial</button><button className="btn primary" onClick={save}><Icon name="check" size={15} className="btn-ico" />Guardar alta</button></>}>
@@ -76,15 +173,28 @@ function EstudianteModal({ entry, onClose }) {
       <Field label="Plan de pagos según nivel"><SelectInput style={{ minHeight: 42, width: '100%' }} value={form.plan || '10'} onChange={e => set('plan', e.target.value)} options={estPlanOptions(form.nivel)} /></Field>
       <div className="field-row"><Field label="¿Tiene beca?"><SelectInput value={form.hasBeca ? 'si' : 'no'} onChange={e => setForm(f => ({ ...f, hasBeca: e.target.value === 'si', beca: e.target.value === 'si' ? f.beca : 0 }))} options={[{ value: 'no', label: 'No' }, { value: 'si', label: 'Sí' }]} /></Field><Field label="% beca colegiaturas"><NumberInput min="0" max="100" value={form.hasBeca ? (form.beca || 0) : 0} disabled={!form.hasBeca} onChange={e => set('beca', e.target.value)} /></Field></div>
       <div className="field-row"><Field label="¿Paga inscripción?"><SelectInput value={ip.inscripcionPagada ? 'si' : 'no'} onChange={e => { const yes = e.target.value === 'si'; setForm(f => ({ ...f, initialPayments: { ...(f.initialPayments || {}), inscripcionPagada: yes, inscripcion: yes ? (Number(f.initialPayments && f.initialPayments.inscripcion) || estInscripcionAmount(f.nivel)) : 0 } })); }} options={[{ value: 'no', label: 'No' }, { value: 'si', label: 'Sí' }]} /></Field><Field label="Monto pagado inscripción"><NumberInput min="0" value={ip.inscripcion || 0} disabled={!ip.inscripcionPagada} onChange={e => setPay('inscripcion', e.target.value)} /></Field></div>
-      <Field label="Abono a cuenta cuota única anual"><NumberInput min="0" value={ip.cuotaAnual || 0} onChange={e => setPay('cuotaAnual', e.target.value)} /></Field>
-      <div className="field-row"><Field label="Forma de pago"><SelectInput style={{ minHeight: 42 }} value={ip.channel || 'Transferencia'} onChange={e => setPay('channel', e.target.value)} options={['Transferencia', 'Tarjeta', 'Efectivo', 'Domiciliación', 'Abono a cuenta']} /></Field><Field label="Detalle"><TextInput value={ip.detalle || ''} onChange={e => setPay('detalle', e.target.value)} placeholder="Folio, SPEI, caja, observaciones" /></Field></div>
-      <div className="faint" style={{ fontSize: 12 }}>No se registra ningún pago si los montos quedan en cero.</div>
+      <div className="field-row"><Field label="Forma de pago"><SelectInput style={{ minHeight: 42 }} value={ip.channel || 'Transferencia'} onChange={e => setPay('channel', e.target.value)} options={['Transferencia', 'Tarjeta', 'Efectivo', 'Domiciliación']} /></Field><Field label="Detalle"><TextInput value={ip.detalle || ''} onChange={e => setPay('detalle', e.target.value)} placeholder="Folio, SPEI, caja, observaciones" /></Field></div>
+      <div className="faint" style={{ fontSize: 12 }}>No se registra ningún pago si la inscripción queda en cero.</div>
       <div className="eyebrow">Facturación</div>
       <Field label="¿Factura el estudiante?"><SelectInput value={form.factura ? 'si' : 'no'} onChange={e => set('factura', e.target.value === 'si')} options={[{ value: 'no', label: 'No' }, { value: 'si', label: 'Sí' }]} /></Field>
       {form.factura && <div className="col" style={{ gap: 12 }}><div className="field-row"><Field label="Razón social"><TextInput value={fiscal.razonSocial || ''} onChange={e => setFiscal('razonSocial', e.target.value.toUpperCase())} /></Field><Field label="RFC"><TextInput value={fiscal.rfc || ''} onChange={e => setFiscal('rfc', e.target.value.toUpperCase())} /></Field></div><div className="field-row"><Field label="Régimen fiscal"><SelectInput value={fiscal.regimenFiscal || ''} onChange={e => setFiscal('regimenFiscal', e.target.value)} options={EST_REGIMENES} /></Field><Field label="Uso CFDI"><SelectInput value={fiscal.usoCfdi || 'D10'} onChange={e => setFiscal('usoCfdi', e.target.value)} options={EST_USOS_CFDI} /></Field></div><div className="field-row"><Field label="Código postal"><TextInput value={fiscal.cpFiscal || ''} onChange={e => setFiscal('cpFiscal', e.target.value)} /></Field><Field label="Correo de facturación"><TextInput value={fiscal.emailFacturacion || ''} onChange={e => setFiscal('emailFacturacion', e.target.value.toLowerCase())} /></Field></div><Field label="Domicilio fiscal"><TextInput value={fiscal.domicilioFiscal || ''} onChange={e => setFiscal('domicilioFiscal', e.target.value)} /></Field><div className="eyebrow">Complemento de Instituciones Educativas</div><div className="field-row"><Field label="Nombre alumno"><TextInput value={ie.nombreAlumno || form.name || ''} onChange={e => setIE('nombreAlumno', e.target.value)} /></Field><Field label="CURP alumno"><TextInput value={ie.curpAlumno || form.curp || ''} onChange={e => setIE('curpAlumno', e.target.value.toUpperCase())} /></Field></div><div className="field-row"><Field label="Nivel educativo"><SelectInput value={ie.nivelEducativo || form.nivel} onChange={e => setIE('nivelEducativo', e.target.value)} options={EST_NIVELES} /></Field><Field label="Autorización / RVOE"><TextInput value={ie.autRVOE || ''} onChange={e => setIE('autRVOE', e.target.value)} /></Field></div><Field label="RFC de quien realiza el pago"><TextInput value={ie.rfcPago || ''} onChange={e => setIE('rfcPago', e.target.value.toUpperCase())} /></Field></div>}
       <div className="eyebrow">Credenciales de acceso</div>
-      <div className="field-row"><Field label="Usuario generado"><TextInput value={form.email || ''} readOnly /></Field><Field label="Clave inicial generada"><TextInput value={form.accessKey || 'Se generará automáticamente al guardar'} readOnly /></Field></div>
+      <div className="field-row"><Field label="Usuario generado"><TextInput value={form.email || ''} readOnly /></Field><Field label="Clave inicial"><TextInput value="Se generará automáticamente al guardar" readOnly /></Field></div>
     </div>
   </Modal>;
 }
-Object.assign(window, { EstudianteModal });
+function StudentCredentialHost() {
+  const [student, setStudent] = React.useState(null);
+  React.useEffect(() => {
+    const h = (e) => setStudent(e.detail || window.__piagetStudentCredential || {});
+    window.addEventListener('piaget-open-student-credential', h);
+    return () => window.removeEventListener('piaget-open-student-credential', h);
+  }, []);
+  return student ? <StudentCredentialModal student={student} onClose={() => setStudent(null)} /> : null;
+}
+const __OldAcademicoRealOnly = window.AcademicoRealOnly || AcademicoRealOnly;
+function AcademicoRealOnly(props) {
+  return <React.Fragment><__OldAcademicoRealOnly {...props} /><StudentCredentialHost /></React.Fragment>;
+}
+function Academico(props) { return <AcademicoRealOnly {...props} />; }
+Object.assign(window, { EstudianteModal, StudentCredentialCard, StudentCredentialModal, StudentCredentialHost, estPrintCredential, AcademicoRealOnly, Academico });
