@@ -1,5 +1,10 @@
 /* gallery_nav_patch.jsx — agrega Galería a Comunicación y carga parches finales */
 (function () {
+  function transformLateBabel() {
+    setTimeout(function () {
+      try { if (window.Babel && typeof Babel.transformScriptTags === 'function') Babel.transformScriptTags(); } catch (_) {}
+    }, 80);
+  }
   function loadScriptOnce(src) {
     if (document.querySelector('script[src*="' + src.split('?')[0] + '"]')) return;
     var s = document.createElement('script');
@@ -14,6 +19,7 @@
     s.src = src;
     s.async = false;
     document.head.appendChild(s);
+    transformLateBabel();
   }
   function loadBabelForce(src) {
     var s = document.createElement('script');
@@ -21,6 +27,7 @@
     s.src = src;
     s.async = false;
     document.head.appendChild(s);
+    transformLateBabel();
   }
   function addRoute() {
     window.ROUTES = window.ROUTES || {};
