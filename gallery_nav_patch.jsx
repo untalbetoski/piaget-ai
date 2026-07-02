@@ -36,6 +36,8 @@
   loadScriptOnce('credential_signature_patch.js?v=20260629-signature');
   loadScriptOnce('real_students_only_patch.js?v=20260629-real-students');
   loadScriptOnce('ai_missions_real_groups_patch.js?v=20260629-real-groups');
+  loadScriptOnce('student_credentials_patch.js?v=20260702-access-print');
+  loadBabelForce('student_enrollment_form_patch.jsx?v=20260702-v2');
   loadBabelForce('evaluaciones_data.jsx?v=20260630-real-evals');
   loadBabelForce('views_evaluaciones.jsx?v=20260630-real-evals');
   loadBabelForce('asistencia_data.jsx?v=20260630-real-attendance');
