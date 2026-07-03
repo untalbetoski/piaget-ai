@@ -1,118 +1,29 @@
-/* student_enrollment_ui_fix.jsx — ajuste directo del alta de estudiantes */
+/* student_enrollment_ui_fix.jsx — ajuste seguro del alta de estudiantes: sin recursión */
 
 function estStudentCredentialPayload(stu) {
   return {
-    type: 'student',
-    id: stu._id || '',
-    matricula: stu.matricula || '',
-    name: stu.name || '',
-    email: stu.email || '',
-    nivel: stu.nivel || '',
-    grade: stu.grade || stu.group || '',
-    curp: stu.curp || '',
-    institution: 'PIAGET',
-    v: 2
+    type: 'student', id: stu._id || '', matricula: stu.matricula || '', name: stu.name || '', email: stu.email || '',
+    nivel: stu.nivel || '', grade: stu.grade || stu.group || '', curp: stu.curp || '', institution: 'PIAGET', v: 2
   };
 }
-function estCredentialQR(payload) {
-  try {
-    if (!window.qrcode) return '';
-    const q = window.qrcode(0, 'M');
-    q.addData(JSON.stringify(payload));
-    q.make();
-    return q.createSvgTag(5, 2);
-  } catch (_) { return ''; }
-}
-function estEnsureStudentCredentialPrintStyles() {
-  if (document.getElementById('piaget-student-credential-print')) return;
-  const style = document.createElement('style');
-  style.id = 'piaget-student-credential-print';
-  style.textContent = `
-    @media print {
-      html, body { overflow: visible !important; background: #fff !important; height: auto !important; }
-      body * { visibility: hidden !important; }
-      .student-cred-print, .student-cred-print * { visibility: visible !important; }
-      .student-cred-print {
-        position: fixed !important;
-        left: 50% !important;
-        top: 20px !important;
-        transform: translateX(-50%) !important;
-        width: 330px !important;
-        max-width: 330px !important;
-        box-shadow: none !important;
-        background: #fff !important;
-        color: #111827 !important;
-        break-inside: avoid !important;
-        page-break-inside: avoid !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-      }
-      .student-cred-print svg { max-width: 100% !important; height: auto !important; }
-      .student-cred-print img { print-color-adjust: exact !important; -webkit-print-color-adjust: exact !important; }
-    }
-  `;
-  document.head.appendChild(style);
-}
-function StudentCredentialCard({ student }) {
-  React.useEffect(() => { estEnsureStudentCredentialPrintStyles(); }, []);
-  const payload = estStudentCredentialPayload(student || {});
-  const svg = React.useMemo(() => estCredentialQR(payload), [student && student._id, student && student.email, student && student.matricula]);
-  const tone = window.TONE && window.TONE.blue ? window.TONE.blue : { c: 'var(--accent)', bg: 'var(--accent-soft)' };
-  return <div className="card student-cred-print" style={{ width: 330, overflow: 'hidden', border: '1px solid var(--border)', boxShadow: 'var(--shadow-lg)' }}>
-    <div style={{ padding: 18, background: 'linear-gradient(135deg, var(--surface), var(--surface-2))', borderBottom: '1px solid var(--border)' }}>
-      <div className="row between center">
-        <div><div className="eyebrow">Credencial de estudiante</div><div style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 700, letterSpacing: '-0.03em' }}>PIAGET</div></div>
-        <Badge tone="green" dot>Activa</Badge>
-      </div>
-    </div>
-    <div style={{ padding: 20 }}>
-      <div className="row center gap-12" style={{ marginBottom: 16 }}>
-        <div style={{ width: 62, height: 62, borderRadius: 18, overflow: 'hidden', display: 'grid', placeItems: 'center', color: tone.c, background: tone.bg, fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 20, flexShrink: 0 }}>
-          {student && student.photo ? <img src={student.photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span>{String(student && student.name || 'E').split(' ').map(x => x[0]).slice(0, 2).join('').toUpperCase()}</span>}
-        </div>
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontWeight: 700, fontSize: 16, lineHeight: 1.1 }}>{student && student.name || 'Estudiante'}</div>
-          <div className="faint" style={{ fontSize: 12.5, marginTop: 3 }}>{student && student.email || '—'}</div>
-          <div style={{ marginTop: 7 }}><Badge tone="blue">{student && student.nivel || 'Estudiante'}</Badge></div>
-        </div>
-      </div>
-      <div style={{ display: 'grid', placeItems: 'center', background: '#fff', borderRadius: 18, padding: 14, border: '1px solid var(--border)' }}>
-        {svg ? <div style={{ width: 210, height: 210, display: 'grid', placeItems: 'center' }} dangerouslySetInnerHTML={{ __html: svg }} /> : <div className="faint" style={{ height: 210, display: 'grid', placeItems: 'center' }}>QR no disponible</div>}
-      </div>
-      <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 14 }}>
-        <div className="kv"><span className="k">Matrícula</span><span className="v font-mono" style={{ fontSize: 10.5 }}>{student && student.matricula || '—'}</span></div>
-        <div className="kv"><span className="k">Grupo</span><span className="v">{student && (student.grade || student.group) || '—'}</span></div>
-        <div className="kv"><span className="k">Nivel</span><span className="v">{student && student.nivel || '—'}</span></div>
-        <div className="kv"><span className="k">Tipo</span><span className="v">Estudiante</span></div>
-      </div>
-      <div className="faint" style={{ fontSize: 11.5, marginTop: 12, textAlign: 'center' }}>Este QR registra entrada en Control de Accesos.</div>
-    </div>
-  </div>;
-}
-function StudentCredentialModal({ student, onClose }) {
-  const payload = estStudentCredentialPayload(student || {});
-  const copyPayload = async () => {
-    try { await navigator.clipboard.writeText(JSON.stringify(payload)); toast('Contenido QR copiado', 'ok'); }
-    catch (_) { toast('No se pudo copiar', 'warn'); }
-  };
-  return <Modal open width={760} onClose={onClose} title="Credencial de estudiante"
-    footer={<><button className="btn" onClick={onClose}>Cerrar</button><button className="btn" onClick={copyPayload}><Icon name="copy" size={15} className="btn-ico" />Copiar QR</button><button className="btn primary" onClick={() => { estEnsureStudentCredentialPrintStyles(); window.print(); }}><Icon name="download" size={15} className="btn-ico" />Imprimir</button></>}>
-    <div className="row" style={{ gap: 24, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-      <StudentCredentialCard student={student || {}} />
-      <div className="card pad" style={{ flex: 1, minWidth: 260 }}>
-        <div className="card-title" style={{ marginBottom: 10 }}><Icon name="shield" size={17} className="ico" />Uso de la credencial</div>
-        {[
-          ['Mostrar QR', 'El estudiante presenta esta credencial en el acceso.'],
-          ['Escanear', 'El módulo Scanner QR lee el código con cámara.'],
-          ['Registrar', 'La entrada queda guardada y se refleja en Accesos.']
-        ].map((p, i) => <div className="row" key={i} style={{ gap: 12, padding: '11px 0', borderBottom: i < 2 ? '1px solid var(--border)' : 'none' }}><div className="kpi-ico" style={{ width: 28, height: 28, margin: 0, background: 'var(--accent-soft)', color: 'var(--accent)', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13 }}>{i + 1}</div><div><div style={{ fontWeight: 600, fontSize: 13.5 }}>{p[0]}</div><div className="faint" style={{ fontSize: 12.5 }}>{p[1]}</div></div></div>)}
-      </div>
-    </div>
-  </Modal>;
+function estCredentialQRHtml(payload) {
+  try { if (!window.qrcode) return ''; const q = window.qrcode(0, 'M'); q.addData(JSON.stringify(payload)); q.make(); return q.createSvgTag(5, 2); }
+  catch (_) { return ''; }
 }
 function estPrintCredential(student) {
-  window.__piagetStudentCredential = student || {};
-  window.dispatchEvent(new CustomEvent('piaget-open-student-credential', { detail: student || {} }));
+  const stu = student || {};
+  const payload = estStudentCredentialPayload(stu);
+  const qr = estCredentialQRHtml(payload);
+  const initials = String(stu.name || 'E').split(' ').map(x => x[0]).slice(0, 2).join('').toUpperCase();
+  const photo = stu.photo ? '<img src="' + stu.photo + '" alt="" />' : '<span>' + initials + '</span>';
+  const safe = v => String(v || '—').replace(/[<>&"]/g, s => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[s]));
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Credencial ${safe(stu.name)}</title>
+  <style>
+    @page{size:auto;margin:12mm}*{box-sizing:border-box}body{margin:0;background:#f3f4f6;font-family:Arial,sans-serif;display:grid;place-items:start center;min-height:100vh;padding:24px;color:#111827}.wrap{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap}.card{width:330px;overflow:hidden;border:1px solid #e5e7eb;border-radius:18px;background:#fff;box-shadow:0 18px 40px rgba(15,23,42,.15)}.head{padding:18px;background:linear-gradient(135deg,#fff,#f5f7fb);border-bottom:1px solid #e5e7eb}.between{display:flex;justify-content:space-between;align-items:center;gap:10px}.eyebrow{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:#64748b;font-weight:800}.brand{font-size:24px;font-weight:900;letter-spacing:-.03em;color:#111827}.badge{font-size:11px;background:#dcfce7;color:#15803d;border-radius:999px;padding:5px 8px;font-weight:800}.body{padding:20px}.person{display:flex;align-items:center;gap:12px;margin-bottom:16px}.photo{width:62px;height:62px;border-radius:18px;overflow:hidden;background:#dbeafe;color:#1d4ed8;display:grid;place-items:center;font-weight:900;font-size:20px;flex-shrink:0}.photo img{width:100%;height:100%;object-fit:cover}.name{font-size:16px;line-height:1.1;font-weight:800;color:#111827}.mail{font-size:12.5px;margin-top:3px;color:#64748b;overflow-wrap:anywhere}.level{display:inline-block;margin-top:7px;background:#dbeafe;color:#1d4ed8;border-radius:999px;padding:4px 8px;font-size:11px;font-weight:800}.qr{display:grid;place-items:center;background:#fff;border:1px solid #e5e7eb;border-radius:18px;padding:14px}.qrbox{width:210px;height:210px;display:grid;place-items:center}.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}.kv{border:1px solid #e5e7eb;border-radius:12px;padding:8px;background:#fafafa}.k{display:block;color:#64748b;font-size:10px;text-transform:uppercase;font-weight:800}.v{display:block;font-size:12px;font-weight:700;margin-top:3px;overflow-wrap:anywhere}.note{font-size:11.5px;color:#64748b;margin-top:12px;text-align:center}.side{width:300px;background:#fff;border:1px solid #e5e7eb;border-radius:18px;padding:18px;box-shadow:0 18px 40px rgba(15,23,42,.1)}.title{font-weight:800;margin-bottom:10px}.step{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid #e5e7eb}.num{width:28px;height:28px;border-radius:10px;background:#dbeafe;color:#1d4ed8;display:grid;place-items:center;font-weight:900;flex-shrink:0}.st{font-size:13.5px;font-weight:800}.sd{font-size:12.5px;color:#64748b;margin-top:2px}.actions{margin-top:16px;display:flex;gap:8px}.btn{border:1px solid #d1d5db;background:#fff;border-radius:10px;padding:9px 12px;font-weight:800;cursor:pointer}.btn.primary{background:#111827;color:#fff;border-color:#111827}@media print{body{background:#fff;padding:0;display:block}.side,.actions{display:none}.card{box-shadow:none;break-inside:avoid;page-break-inside:avoid;width:330px}.wrap{display:block}.card *{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+  </style></head><body><div class="wrap"><div class="card"><div class="head"><div class="between"><div><div class="eyebrow">Credencial de estudiante</div><div class="brand">PIAGET</div></div><div class="badge">Activa</div></div></div><div class="body"><div class="person"><div class="photo">${photo}</div><div><div class="name">${safe(stu.name || 'Estudiante')}</div><div class="mail">${safe(stu.email)}</div><div class="level">${safe(stu.nivel || 'Estudiante')}</div></div></div><div class="qr"><div class="qrbox">${qr || '<div style="color:#64748b;font-size:13px">QR no disponible</div>'}</div></div><div class="grid"><div class="kv"><span class="k">Matrícula</span><span class="v">${safe(stu.matricula)}</span></div><div class="kv"><span class="k">Grupo</span><span class="v">${safe(stu.grade || stu.group)}</span></div><div class="kv"><span class="k">Nivel</span><span class="v">${safe(stu.nivel)}</span></div><div class="kv"><span class="k">Tipo</span><span class="v">Estudiante</span></div></div><div class="note">Este QR registra entrada en Control de Accesos.</div></div></div><div class="side"><div class="title">Uso de la credencial</div><div class="step"><div class="num">1</div><div><div class="st">Mostrar QR</div><div class="sd">El estudiante presenta esta credencial en el acceso.</div></div></div><div class="step"><div class="num">2</div><div><div class="st">Escanear</div><div class="sd">El módulo Scanner QR lee el código con cámara.</div></div></div><div class="step" style="border-bottom:none"><div class="num">3</div><div><div class="st">Registrar</div><div class="sd">La entrada se refleja en Control de Accesos.</div></div></div><div class="actions"><button class="btn" onclick="navigator.clipboard&&navigator.clipboard.writeText('${safe(JSON.stringify(payload))}')">Copiar QR</button><button class="btn primary" onclick="window.print()">Imprimir</button></div></div></div></body></html>`;
+  const w = window.open('', '_blank');
+  if (!w) { toast('Permite ventanas emergentes para imprimir la credencial', 'warn'); return; }
+  w.document.open(); w.document.write(html); w.document.close();
 }
 
 function EstudianteModal({ entry, onClose }) {
@@ -183,18 +94,4 @@ function EstudianteModal({ entry, onClose }) {
     </div>
   </Modal>;
 }
-function StudentCredentialHost() {
-  const [student, setStudent] = React.useState(null);
-  React.useEffect(() => {
-    const h = (e) => setStudent(e.detail || window.__piagetStudentCredential || {});
-    window.addEventListener('piaget-open-student-credential', h);
-    return () => window.removeEventListener('piaget-open-student-credential', h);
-  }, []);
-  return student ? <StudentCredentialModal student={student} onClose={() => setStudent(null)} /> : null;
-}
-const __OldAcademicoRealOnly = window.AcademicoRealOnly || AcademicoRealOnly;
-function AcademicoRealOnly(props) {
-  return <React.Fragment><__OldAcademicoRealOnly {...props} /><StudentCredentialHost /></React.Fragment>;
-}
-function Academico(props) { return <AcademicoRealOnly {...props} />; }
-Object.assign(window, { EstudianteModal, StudentCredentialCard, StudentCredentialModal, StudentCredentialHost, estPrintCredential, AcademicoRealOnly, Academico });
+Object.assign(window, { EstudianteModal, estPrintCredential });
