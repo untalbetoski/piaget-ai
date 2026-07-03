@@ -1,5 +1,13 @@
-/* student_enrollment_ui_fix.jsx — alta de estudiantes: matrícula numérica + abono a inscripción */
+/* student_enrollment_ui_fix.jsx — alta de estudiantes: matrícula numérica + abono a inscripción + documentos oficiales */
 
+const EST_OFFICIAL_DOCS = [
+  { key: 'actaNacimientoEstudiante', label: 'Acta de Nacimiento del Estudiante' },
+  { key: 'curpEstudiante', label: 'CURP del Estudiante' },
+  { key: 'certificadoMedico', label: 'Certificado Médico' },
+  { key: 'ineTutor', label: 'INE del Tutor' },
+  { key: 'curpTutor', label: 'CURP del Tutor' },
+  { key: 'actaNacimientoTutor', label: 'Acta de Nacimiento del Tutor' },
+];
 function estStudentCredentialPayload(stu) {
   return {
     type: 'student', id: stu._id || '', matricula: stu.matricula || '', name: stu.name || '', email: stu.email || '',
@@ -40,6 +48,27 @@ function estDefaultMatricula() {
 function estNormalizeMatricula(v) {
   return String(v || '').replace(/\D/g, '').slice(0, 12);
 }
+function estOfficialDocumentsEmpty(existing) {
+  const out = {};
+  EST_OFFICIAL_DOCS.forEach(d => out[d.key] = existing && existing[d.key] ? existing[d.key] : null);
+  return out;
+}
+function estReadOfficialPdf(file, cb) {
+  if (!file) return;
+  const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name || '');
+  if (!isPdf) { toast('Solo se permiten documentos PDF', 'warn'); return; }
+  const r = new FileReader();
+  r.onload = () => cb({ name: file.name, type: 'application/pdf', size: file.size || 0, dataUrl: String(r.result), uploadedAt: new Date().toISOString() });
+  r.readAsDataURL(file);
+}
+function estOpenOfficialDoc(doc) {
+  if (!doc || !doc.dataUrl) { toast('Documento no disponible', 'warn'); return; }
+  const w = window.open('', '_blank');
+  if (!w) { toast('Permite ventanas emergentes para ver el PDF', 'warn'); return; }
+  w.document.open();
+  w.document.write('<iframe src="' + doc.dataUrl + '" style="border:0;width:100%;height:100vh"></iframe>');
+  w.document.close();
+}
 
 function EstudianteModal({ entry, onClose }) {
   const [form, setForm] = React.useState(() => {
@@ -54,6 +83,7 @@ function EstudianteModal({ entry, onClose }) {
       factura: !!(base.factura || fiscal.factura),
       hasBeca: !!base.hasBeca || Number(base.beca) > 0,
       beca: Number(base.beca) || 0,
+      officialDocuments: estOfficialDocumentsEmpty(base.officialDocuments || base.documents),
       initialPayments: { inscripcionPagada: false, inscripcion: 0, channel: 'Transferencia', detalle: '' },
       accessKey: (base.access && base.access.key) || ''
     };
@@ -63,10 +93,12 @@ function EstudianteModal({ entry, onClose }) {
   const fiscal = form.fiscal || estFiscalEmpty(form);
   const ie = fiscal.complementoIE || {};
   const ip = form.initialPayments || { inscripcionPagada: false, inscripcion: 0, channel: 'Transferencia', detalle: '' };
+  const docs = form.officialDocuments || estOfficialDocumentsEmpty();
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const setFiscal = (k, v) => setForm(f => ({ ...f, fiscal: { ...(f.fiscal || estFiscalEmpty(f)), [k]: v } }));
   const setIE = (k, v) => setForm(f => ({ ...f, fiscal: { ...(f.fiscal || estFiscalEmpty(f)), complementoIE: { ...((f.fiscal && f.fiscal.complementoIE) || {}), [k]: v } } }));
   const setPay = (k, v) => setForm(f => ({ ...f, initialPayments: { ...(f.initialPayments || {}), [k]: v } }));
+  const setDoc = (key, doc) => setForm(f => ({ ...f, officialDocuments: { ...estOfficialDocumentsEmpty(f.officialDocuments), [key]: doc } }));
   function updateName(v) { setForm(f => ({ ...f, name: v, email: estGeneratedEmail(v, entry && entry._id), fiscal: { ...(f.fiscal || estFiscalEmpty(f)), complementoIE: { ...((f.fiscal && f.fiscal.complementoIE) || {}), nombreAlumno: v } } })); }
   function updateCurp(v) { const curp = String(v || '').toUpperCase(); setForm(f => ({ ...f, curp, fiscal: { ...(f.fiscal || estFiscalEmpty(f)), complementoIE: { ...((f.fiscal && f.fiscal.complementoIE) || {}), curpAlumno: curp } } })); }
   function updateNivel(v) { const g = estGroupsByNivel(v)[0] || ''; setForm(f => ({ ...f, nivel: v, grade: g, plan: '10', fiscal: { ...(f.fiscal || estFiscalEmpty(f)), complementoIE: { ...((f.fiscal && f.fiscal.complementoIE) || {}), nivelEducativo: v } }, initialPayments: { ...(f.initialPayments || {}), inscripcion: f.initialPayments && f.initialPayments.inscripcionPagada ? estInscripcionAmount(v) : (f.initialPayments ? f.initialPayments.inscripcion : 0) } })); }
@@ -85,7 +117,7 @@ function EstudianteModal({ entry, onClose }) {
     if (form.factura && (!estClean(fiscalOut.razonSocial) || !estClean(fiscalOut.rfc) || !estClean(fiscalOut.regimenFiscal) || !estClean(fiscalOut.usoCfdi) || !estClean(fiscalOut.cpFiscal))) return toast('Completa los datos fiscales obligatorios', 'warn');
     const email = estGeneratedEmail(form.name, entry && entry._id);
     const key = form.accessKey || estInitialKey(form.name, form.curp);
-    const payload = { ...form, matricula: estNormalizeMatricula(form.matricula), name: estClean(form.name), email, curp: String(form.curp || '').toUpperCase(), tutor: estClean(form.tutor), phone: estClean(form.phone), plan: form.plan || '10', hasBeca: !!form.hasBeca, beca: form.hasBeca ? Math.max(0, Math.min(100, Number(form.beca) || 0)) : 0, factura: !!form.factura, fiscal: fiscalOut, access: { username: email, key, role: 'Estudiante', status: 'Activo' }, manual: true, real: true };
+    const payload = { ...form, matricula: estNormalizeMatricula(form.matricula), name: estClean(form.name), email, curp: String(form.curp || '').toUpperCase(), tutor: estClean(form.tutor), phone: estClean(form.phone), plan: form.plan || '10', hasBeca: !!form.hasBeca, beca: form.hasBeca ? Math.max(0, Math.min(100, Number(form.beca) || 0)) : 0, factura: !!form.factura, fiscal: fiscalOut, officialDocuments: form.officialDocuments || {}, access: { username: email, key, role: 'Estudiante', status: 'Activo' }, manual: true, real: true };
     const initial = { ...(form.initialPayments || {}) };
     delete payload.initialPayments;
     delete payload.accessKey;
@@ -113,6 +145,21 @@ function EstudianteModal({ entry, onClose }) {
       <div className="field-row"><Field label="Nivel"><SelectInput value={form.nivel} onChange={e => updateNivel(e.target.value)} options={EST_NIVELES} /></Field><Field label="Grupo"><SelectInput value={form.grade || ''} onChange={e => set('grade', e.target.value)} options={groups.length ? groups : [{ value: '', label: 'Crea grupos reales primero' }]} /></Field></div>
       <div className="field-row"><Field label="Fecha de nacimiento"><input className="inp" type="date" value={form.birth || ''} onChange={e => set('birth', e.target.value)} /></Field><Field label="CURP"><TextInput value={form.curp || ''} onChange={e => updateCurp(e.target.value)} /></Field></div>
       <div className="field-row"><Field label="Nombre del tutor"><TextInput value={form.tutor || ''} onChange={e => set('tutor', e.target.value)} /></Field><Field label="Teléfono"><TextInput value={form.phone || ''} onChange={e => set('phone', e.target.value)} /></Field></div>
+      <div className="eyebrow">Documentos oficiales en PDF</div>
+      <div className="grid" style={{ gridTemplateColumns: 'repeat(2,minmax(0,1fr))', gap: 10 }}>
+        {EST_OFFICIAL_DOCS.map(d => {
+          const doc = docs[d.key];
+          return <div key={d.key} className="card pad" style={{ boxShadow: 'none', border: '1px solid var(--border)' }}>
+            <div style={{ fontWeight: 700, fontSize: 13.5 }}>{d.label}</div>
+            <div className="faint" style={{ fontSize: 12, marginTop: 4, minHeight: 18 }}>{doc ? doc.name : 'PDF pendiente'}</div>
+            <div className="row gap-8" style={{ marginTop: 10, flexWrap: 'wrap' }}>
+              <label className="btn sm" style={{ cursor: 'pointer' }}><Icon name="upload" size={12} className="btn-ico" />Subir PDF<input type="file" accept="application/pdf,.pdf" style={{ display: 'none' }} onChange={e => estReadOfficialPdf(e.target.files[0], file => setDoc(d.key, file))} /></label>
+              {doc && <button className="btn sm" onClick={() => estOpenOfficialDoc(doc)}><Icon name="eye" size={12} className="btn-ico" />Ver</button>}
+              {doc && <button className="btn sm" onClick={() => setDoc(d.key, null)}><Icon name="trash" size={12} className="btn-ico" />Quitar</button>}
+            </div>
+          </div>;
+        })}
+      </div>
       <div className="eyebrow">Plan de pagos</div>
       <Field label="Plan de pagos según nivel"><SelectInput style={{ minHeight: 42, width: '100%' }} value={form.plan || '10'} onChange={e => set('plan', e.target.value)} options={estPlanOptions(form.nivel)} /></Field>
       <div className="field-row"><Field label="¿Tiene beca?"><SelectInput value={form.hasBeca ? 'si' : 'no'} onChange={e => setForm(f => ({ ...f, hasBeca: e.target.value === 'si', beca: e.target.value === 'si' ? f.beca : 0 }))} options={[{ value: 'no', label: 'No' }, { value: 'si', label: 'Sí' }]} /></Field><Field label="% beca colegiaturas"><NumberInput min="0" max="100" value={form.hasBeca ? (form.beca || 0) : 0} disabled={!form.hasBeca} onChange={e => set('beca', e.target.value)} /></Field></div>
@@ -127,4 +174,4 @@ function EstudianteModal({ entry, onClose }) {
     </div>
   </Modal>;
 }
-Object.assign(window, { EstudianteModal, estPrintCredential, estNormalizeMatricula });
+Object.assign(window, { EstudianteModal, estPrintCredential, estNormalizeMatricula, estOfficialDocumentsEmpty });
