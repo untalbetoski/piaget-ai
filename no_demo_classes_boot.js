@@ -12,5 +12,6 @@
   }catch(e){}
   try{
     document.write('<script src="home_school_calendar_patch.js?v=20260701-role-home-calendar"><\/script>');
+    document.write('<script src="student_module_repair_boot.js?v=20260702-students-repair"><\/script>');
   }catch(e){}
 })();
