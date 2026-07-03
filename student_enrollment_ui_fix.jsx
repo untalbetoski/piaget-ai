@@ -1,18 +1,13 @@
-/* student_enrollment_ui_fix.jsx — alta de estudiantes: matrícula alfanumérica + abono a inscripción */
+/* student_enrollment_ui_fix.jsx — alta de estudiantes: matrícula numérica + abono a inscripción */
 
 function estStudentCredentialPayload(stu) {
   return {
-    type: 'student',
-    id: stu._id || '',
-    matricula: stu.matricula || '',
-    name: stu.name || '',
-    email: stu.email || '',
-    nivel: stu.nivel || '',
-    grade: stu.grade || stu.group || '',
-    curp: stu.curp || '',
-    institution: 'PIAGET',
-    v: 3
+    type: 'student', id: stu._id || '', matricula: stu.matricula || '', name: stu.name || '', email: stu.email || '',
+    nivel: stu.nivel || '', grade: stu.grade || stu.group || '', curp: stu.curp || '', institution: 'PIAGET', v: 4
   };
+}
+function estSafeHtml(v) {
+  return String(v || '—').replace(/[<>&"]/g, s => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[s]));
 }
 function estCredentialQRHtml(payload) {
   try {
@@ -22,9 +17,6 @@ function estCredentialQRHtml(payload) {
     q.make();
     return q.createSvgTag(5, 2);
   } catch (_) { return ''; }
-}
-function estSafeHtml(v) {
-  return String(v || '—').replace(/[<>&"]/g, s => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[s]));
 }
 function estPrintCredential(student) {
   const stu = student || {};
@@ -42,12 +34,11 @@ function estPrintCredential(student) {
   w.document.close();
 }
 function estDefaultMatricula() {
-  const y = new Date().getFullYear();
   const n = 1001 + (typeof estStudents === 'function' ? estStudents().length : ((DB && DB.students) || []).length);
-  return 'JP-' + y + '-' + String(n).padStart(4, '0');
+  return String(n).padStart(6, '0');
 }
 function estNormalizeMatricula(v) {
-  return String(v || '').toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 24);
+  return String(v || '').replace(/\D/g, '').slice(0, 12);
 }
 
 function EstudianteModal({ entry, onClose }) {
@@ -81,7 +72,8 @@ function EstudianteModal({ entry, onClose }) {
   function updateNivel(v) { const g = estGroupsByNivel(v)[0] || ''; setForm(f => ({ ...f, nivel: v, grade: g, plan: '10', fiscal: { ...(f.fiscal || estFiscalEmpty(f)), complementoIE: { ...((f.fiscal && f.fiscal.complementoIE) || {}), nivelEducativo: v } }, initialPayments: { ...(f.initialPayments || {}), inscripcion: f.initialPayments && f.initialPayments.inscripcionPagada ? estInscripcionAmount(v) : (f.initialPayments ? f.initialPayments.inscripcion : 0) } })); }
   function save() {
     if (!estClean(form.name)) return toast('Escribe el nombre completo', 'warn');
-    if (!estClean(form.matricula)) return toast('Captura la matrícula alfanumérica', 'warn');
+    if (!estClean(form.matricula)) return toast('Captura la matrícula', 'warn');
+    if (!/^\d+$/.test(String(form.matricula || ''))) return toast('La matrícula solo debe contener números', 'warn');
     if (!form.nivel) return toast('Selecciona el nivel', 'warn');
     if (!form.grade) return toast('Selecciona el grupo', 'warn');
     if (!form.birth) return toast('Selecciona la fecha de nacimiento', 'warn');
@@ -115,7 +107,7 @@ function EstudianteModal({ entry, onClose }) {
     <div className="col" style={{ gap: 16 }}>
       <div className="row center gap-12"><div onClick={() => photoRef.current && photoRef.current.click()} style={{ width: 78, height: 78, borderRadius: 18, overflow: 'hidden', cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--surface-2)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>{form.photo ? <img src={form.photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Icon name="user" size={30} className="faint" />}</div><div><button className="btn sm" onClick={() => photoRef.current && photoRef.current.click()}><Icon name="plus" size={12} className="btn-ico" />Subir foto</button><div className="faint" style={{ fontSize: 12, marginTop: 6 }}>Se usará en expediente y credencial.</div></div><input ref={photoRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => estPhotoFile(e.target.files[0], url => set('photo', url))} /></div>
       <div className="eyebrow">Datos del estudiante</div>
-      <Field label="Matrícula alfanumérica"><TextInput value={form.matricula || ''} onChange={e => set('matricula', estNormalizeMatricula(e.target.value))} placeholder="Ej. JP-2026-0001" /></Field>
+      <Field label="Matrícula"><TextInput value={form.matricula || ''} onChange={e => set('matricula', estNormalizeMatricula(e.target.value))} placeholder="Matrícula" inputMode="numeric" /></Field>
       <Field label="Nombre completo"><TextInput value={form.name || ''} onChange={e => updateName(e.target.value)} placeholder="Primer nombre Segundo nombre Apellido paterno Apellido materno" autoFocus /></Field>
       <Field label="Correo institucional"><TextInput value={form.email || ''} readOnly placeholder="Se genera automáticamente" /></Field>
       <div className="field-row"><Field label="Nivel"><SelectInput value={form.nivel} onChange={e => updateNivel(e.target.value)} options={EST_NIVELES} /></Field><Field label="Grupo"><SelectInput value={form.grade || ''} onChange={e => set('grade', e.target.value)} options={groups.length ? groups : [{ value: '', label: 'Crea grupos reales primero' }]} /></Field></div>
