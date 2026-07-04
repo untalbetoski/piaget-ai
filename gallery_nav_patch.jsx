@@ -18,6 +18,6 @@
       }
     }));
   }
-  loadScriptOnce('student_documents_label_patch.js?v=20260703-canva-exact-student-credential');
+  loadScriptOnce('student_documents_label_patch.js?v=20260703-logo-no-signature');
   addRoute();
 })();
