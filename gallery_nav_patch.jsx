@@ -24,6 +24,7 @@
   function addRoute() {
     window.ROUTES = window.ROUTES || {};
     window.ROUTES.galeria = { c: 'GaleriaComunicacion', crumb: ['Comunicación', 'Galería'] };
+    window.ROUTES.contactos = { c: 'Contactos', crumb: ['CRM', 'Contactos'] };
     const nav = window.NAV || [];
     nav.forEach(sec => (sec.items || []).forEach(it => {
       if (it.id === 'comunicacion-fam') {
@@ -34,5 +35,6 @@
   }
   loadScriptOnce('student_documents_label_patch.js?v=20260703-logo-no-signature');
   forceLoadBabel('views_crm.jsx?v=20260704-real-only');
+  forceLoadBabel('views_contactos.jsx?v=20260704-functional-directory');
   addRoute();
 })();
