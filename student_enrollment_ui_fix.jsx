@@ -1,4 +1,4 @@
-/* student_enrollment_ui_fix.jsx — alta de estudiantes: matrícula numérica + abono a inscripción + documentos oficiales */
+/* student_enrollment_ui_fix.jsx — alta estudiantes: matrícula numérica, documentos oficiales y abono inscripción */
 
 const EST_OFFICIAL_DOCS = [
   { key: 'actaNacimientoEstudiante', label: 'Acta de Nacimiento del Estudiante' },
@@ -6,68 +6,46 @@ const EST_OFFICIAL_DOCS = [
   { key: 'certificadoMedico', label: 'Certificado Médico' },
   { key: 'ineTutor', label: 'INE del Tutor' },
   { key: 'curpTutor', label: 'CURP del Tutor' },
-  { key: 'actaNacimientoTutor', label: 'Acta de Nacimiento del Tutor' },
+  { key: 'reporteEvaluacionAnteriorEstudiante', label: 'Reporte de Evaluación Anterior del Estudiante' },
 ];
-function estStudentCredentialPayload(stu) {
-  return {
-    type: 'student', id: stu._id || '', matricula: stu.matricula || '', name: stu.name || '', email: stu.email || '',
-    nivel: stu.nivel || '', grade: stu.grade || stu.group || '', curp: stu.curp || '', institution: 'PIAGET', v: 4
-  };
-}
-function estSafeHtml(v) {
-  return String(v || '—').replace(/[<>&"]/g, s => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[s]));
-}
-function estCredentialQRHtml(payload) {
-  try {
-    if (!window.qrcode) return '';
-    const q = window.qrcode(0, 'M');
-    q.addData(JSON.stringify(payload));
-    q.make();
-    return q.createSvgTag(5, 2);
-  } catch (_) { return ''; }
-}
-function estPrintCredential(student) {
-  const stu = student || {};
-  const payload = estStudentCredentialPayload(stu);
-  const qr = estCredentialQRHtml(payload);
-  const initials = String(stu.name || 'E').split(' ').map(x => x[0]).slice(0, 2).join('').toUpperCase();
-  const photo = stu.photo ? '<img src="' + stu.photo + '" alt="" />' : '<span>' + initials + '</span>';
-  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Credencial ${estSafeHtml(stu.name)}</title>
-  <style>@page{size:auto;margin:12mm}*{box-sizing:border-box}body{margin:0;background:#f3f4f6;font-family:Arial,sans-serif;display:grid;place-items:start center;min-height:100vh;padding:24px;color:#111827}.wrap{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap}.card{width:330px;overflow:hidden;border:1px solid #e5e7eb;border-radius:18px;background:#fff;box-shadow:0 18px 40px rgba(15,23,42,.15)}.head{padding:18px;background:linear-gradient(135deg,#fff,#f5f7fb);border-bottom:1px solid #e5e7eb}.between{display:flex;justify-content:space-between;align-items:center;gap:10px}.eyebrow{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:#64748b;font-weight:800}.brand{font-size:24px;font-weight:900;letter-spacing:-.03em;color:#111827}.badge{font-size:11px;background:#dcfce7;color:#15803d;border-radius:999px;padding:5px 8px;font-weight:800}.body{padding:20px}.person{display:flex;align-items:center;gap:12px;margin-bottom:16px}.photo{width:62px;height:62px;border-radius:18px;overflow:hidden;background:#dbeafe;color:#1d4ed8;display:grid;place-items:center;font-weight:900;font-size:20px;flex-shrink:0}.photo img{width:100%;height:100%;object-fit:cover}.name{font-size:16px;line-height:1.1;font-weight:800;color:#111827}.mail{font-size:12.5px;margin-top:3px;color:#64748b;overflow-wrap:anywhere}.level{display:inline-block;margin-top:7px;background:#dbeafe;color:#1d4ed8;border-radius:999px;padding:4px 8px;font-size:11px;font-weight:800}.qr{display:grid;place-items:center;background:#fff;border:1px solid #e5e7eb;border-radius:18px;padding:14px}.qrbox{width:210px;height:210px;display:grid;place-items:center}.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}.kv{border:1px solid #e5e7eb;border-radius:12px;padding:8px;background:#fafafa}.k{display:block;color:#64748b;font-size:10px;text-transform:uppercase;font-weight:800}.v{display:block;font-size:12px;font-weight:700;margin-top:3px;overflow-wrap:anywhere}.note{font-size:11.5px;color:#64748b;margin-top:12px;text-align:center}.side{width:300px;background:#fff;border:1px solid #e5e7eb;border-radius:18px;padding:18px;box-shadow:0 18px 40px rgba(15,23,42,.1)}.title{font-weight:800;margin-bottom:10px}.step{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid #e5e7eb}.num{width:28px;height:28px;border-radius:10px;background:#dbeafe;color:#1d4ed8;display:grid;place-items:center;font-weight:900;flex-shrink:0}.st{font-size:13.5px;font-weight:800}.sd{font-size:12.5px;color:#64748b;margin-top:2px}.actions{margin-top:16px;display:flex;gap:8px}.btn{border:1px solid #d1d5db;background:#fff;border-radius:10px;padding:9px 12px;font-weight:800;cursor:pointer}.btn.primary{background:#111827;color:#fff;border-color:#111827}@media print{body{background:#fff;padding:0;display:block}.side,.actions{display:none}.card{box-shadow:none;break-inside:avoid;page-break-inside:avoid;width:330px}.wrap{display:block}.card *{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style>
-  </head><body><div class="wrap"><div class="card"><div class="head"><div class="between"><div><div class="eyebrow">Credencial de estudiante</div><div class="brand">PIAGET</div></div><div class="badge">Activa</div></div></div><div class="body"><div class="person"><div class="photo">${photo}</div><div><div class="name">${estSafeHtml(stu.name || 'Estudiante')}</div><div class="mail">${estSafeHtml(stu.email)}</div><div class="level">${estSafeHtml(stu.nivel || 'Estudiante')}</div></div></div><div class="qr"><div class="qrbox">${qr || '<div style="color:#64748b;font-size:13px">QR no disponible</div>'}</div></div><div class="grid"><div class="kv"><span class="k">Matrícula</span><span class="v">${estSafeHtml(stu.matricula)}</span></div><div class="kv"><span class="k">Grupo</span><span class="v">${estSafeHtml(stu.grade || stu.group)}</span></div><div class="kv"><span class="k">Nivel</span><span class="v">${estSafeHtml(stu.nivel)}</span></div><div class="kv"><span class="k">Tipo</span><span class="v">Estudiante</span></div></div><div class="note">Este QR registra entrada en Control de Accesos.</div></div></div><div class="side"><div class="title">Uso de la credencial</div><div class="step"><div class="num">1</div><div><div class="st">Mostrar QR</div><div class="sd">El estudiante presenta esta credencial en el acceso.</div></div></div><div class="step"><div class="num">2</div><div><div class="st">Escanear</div><div class="sd">El módulo Scanner QR lee el código con cámara.</div></div></div><div class="step" style="border-bottom:none"><div class="num">3</div><div><div class="st">Registrar</div><div class="sd">La entrada se refleja en Control de Accesos.</div></div></div><div class="actions"><button class="btn" onclick="navigator.clipboard&&navigator.clipboard.writeText('${estSafeHtml(JSON.stringify(payload))}')">Copiar QR</button><button class="btn primary" onclick="window.print()">Imprimir</button></div></div></div></body></html>`;
-  const w = window.open('', '_blank');
-  if (!w) { toast('Permite ventanas emergentes para imprimir la credencial', 'warn'); return; }
-  w.document.open();
-  w.document.write(html);
-  w.document.close();
-}
 function estDefaultMatricula() {
-  const n = 1001 + (typeof estStudents === 'function' ? estStudents().length : ((DB && DB.students) || []).length);
+  const n = 1001 + (typeof estStudents === 'function' ? estStudents().length : ((window.DB && DB.students) || []).length);
   return String(n).padStart(6, '0');
 }
-function estNormalizeMatricula(v) {
-  return String(v || '').replace(/\D/g, '').slice(0, 12);
-}
+function estNormalizeMatricula(v) { return String(v || '').replace(/\D/g, '').slice(0, 12); }
 function estOfficialDocumentsEmpty(existing) {
+  const source = existing || {};
   const out = {};
-  EST_OFFICIAL_DOCS.forEach(d => out[d.key] = existing && existing[d.key] ? existing[d.key] : null);
+  EST_OFFICIAL_DOCS.forEach(d => out[d.key] = source[d.key] || null);
+  if (source.actaNacimientoTutor && !out.reporteEvaluacionAnteriorEstudiante) out.reporteEvaluacionAnteriorEstudiante = source.actaNacimientoTutor;
   return out;
 }
 function estReadOfficialPdf(file, cb) {
   if (!file) return;
   const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name || '');
-  if (!isPdf) { toast('Solo se permiten documentos PDF', 'warn'); return; }
+  if (!isPdf) return toast('Solo se permiten documentos PDF', 'warn');
   const r = new FileReader();
   r.onload = () => cb({ name: file.name, type: 'application/pdf', size: file.size || 0, dataUrl: String(r.result), uploadedAt: new Date().toISOString() });
   r.readAsDataURL(file);
 }
 function estOpenOfficialDoc(doc) {
-  if (!doc || !doc.dataUrl) { toast('Documento no disponible', 'warn'); return; }
+  if (!doc || !doc.dataUrl) return toast('Documento no disponible', 'warn');
   const w = window.open('', '_blank');
-  if (!w) { toast('Permite ventanas emergentes para ver el PDF', 'warn'); return; }
+  if (!w) return toast('Permite ventanas emergentes para ver el PDF', 'warn');
   w.document.open();
   w.document.write('<iframe src="' + doc.dataUrl + '" style="border:0;width:100%;height:100vh"></iframe>');
   w.document.close();
+}
+function estStudentCredentialPayload(stu) {
+  return { type: 'student', id: stu._id || '', matricula: stu.matricula || '', name: stu.name || '', email: stu.email || '', nivel: stu.nivel || '', grade: stu.grade || stu.group || '', curp: stu.curp || '', institution: 'PIAGET', v: 5 };
+}
+function estPrintCredential(student) {
+  if (window.StudentCredentialModal || window.StudentCredentialCard) {
+    try { window.dispatchEvent(new CustomEvent('piaget-student-credential-open', { detail: student || {} })); } catch (_) {}
+  }
+  const current = window.estPrintCredential;
+  if (current && current !== estPrintCredential) return current(student);
+  toast('Credencial lista; recarga si no se abre la vista', 'warn');
 }
 
 function EstudianteModal({ entry, onClose }) {
@@ -75,25 +53,14 @@ function EstudianteModal({ entry, onClose }) {
     const base = entry ? { ...estEmptyStudent(), ...entry } : estEmptyStudent();
     const fiscal = { ...estFiscalEmpty(base), ...(base.fiscal || {}) };
     fiscal.complementoIE = { ...estFiscalEmpty(base).complementoIE, ...(fiscal.complementoIE || {}), nombreAlumno: base.name || '', curpAlumno: base.curp || '', nivelEducativo: base.nivel || '' };
-    return {
-      ...base,
-      matricula: estNormalizeMatricula(base.matricula || estDefaultMatricula()),
-      email: base.email || estGeneratedEmail(base.name, entry && entry._id),
-      fiscal,
-      factura: !!(base.factura || fiscal.factura),
-      hasBeca: !!base.hasBeca || Number(base.beca) > 0,
-      beca: Number(base.beca) || 0,
-      officialDocuments: estOfficialDocumentsEmpty(base.officialDocuments || base.documents),
-      initialPayments: { inscripcionPagada: false, inscripcion: 0, channel: 'Transferencia', detalle: '' },
-      accessKey: (base.access && base.access.key) || ''
-    };
+    return { ...base, matricula: estNormalizeMatricula(base.matricula || estDefaultMatricula()), email: base.email || estGeneratedEmail(base.name, entry && entry._id), fiscal, factura: !!(base.factura || fiscal.factura), hasBeca: !!base.hasBeca || Number(base.beca) > 0, beca: Number(base.beca) || 0, officialDocuments: estOfficialDocumentsEmpty(base.officialDocuments || base.documents), initialPayments: { inscripcionPagada: false, inscripcion: 0, channel: 'Transferencia', detalle: '' }, accessKey: (base.access && base.access.key) || '' };
   });
   const photoRef = React.useRef(null);
   const groups = estGroupsByNivel(form.nivel);
   const fiscal = form.fiscal || estFiscalEmpty(form);
   const ie = fiscal.complementoIE || {};
   const ip = form.initialPayments || { inscripcionPagada: false, inscripcion: 0, channel: 'Transferencia', detalle: '' };
-  const docs = form.officialDocuments || estOfficialDocumentsEmpty();
+  const docs = estOfficialDocumentsEmpty(form.officialDocuments);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const setFiscal = (k, v) => setForm(f => ({ ...f, fiscal: { ...(f.fiscal || estFiscalEmpty(f)), [k]: v } }));
   const setIE = (k, v) => setForm(f => ({ ...f, fiscal: { ...(f.fiscal || estFiscalEmpty(f)), complementoIE: { ...((f.fiscal && f.fiscal.complementoIE) || {}), [k]: v } } }));
@@ -117,8 +84,9 @@ function EstudianteModal({ entry, onClose }) {
     if (form.factura && (!estClean(fiscalOut.razonSocial) || !estClean(fiscalOut.rfc) || !estClean(fiscalOut.regimenFiscal) || !estClean(fiscalOut.usoCfdi) || !estClean(fiscalOut.cpFiscal))) return toast('Completa los datos fiscales obligatorios', 'warn');
     const email = estGeneratedEmail(form.name, entry && entry._id);
     const key = form.accessKey || estInitialKey(form.name, form.curp);
-    const payload = { ...form, matricula: estNormalizeMatricula(form.matricula), name: estClean(form.name), email, curp: String(form.curp || '').toUpperCase(), tutor: estClean(form.tutor), phone: estClean(form.phone), plan: form.plan || '10', hasBeca: !!form.hasBeca, beca: form.hasBeca ? Math.max(0, Math.min(100, Number(form.beca) || 0)) : 0, factura: !!form.factura, fiscal: fiscalOut, officialDocuments: form.officialDocuments || {}, access: { username: email, key, role: 'Estudiante', status: 'Activo' }, manual: true, real: true };
-    const initial = { ...(form.initialPayments || {}) };
+    const cleanDocs = estOfficialDocumentsEmpty(form.officialDocuments);
+    const payload = { ...form, matricula: estNormalizeMatricula(form.matricula), name: estClean(form.name), email, curp: String(form.curp || '').toUpperCase(), tutor: estClean(form.tutor), phone: estClean(form.phone), plan: form.plan || '10', hasBeca: !!form.hasBeca, beca: form.hasBeca ? Math.max(0, Math.min(100, Number(form.beca) || 0)) : 0, factura: !!form.factura, fiscal: fiscalOut, officialDocuments: cleanDocs, access: { username: email, key, role: 'Estudiante', status: 'Activo' }, manual: true, real: true };
+    delete payload.documents;
     delete payload.initialPayments;
     delete payload.accessKey;
     delete payload.avg;
@@ -127,10 +95,7 @@ function EstudianteModal({ entry, onClose }) {
     else { saved = Store.add('students', payload); }
     const acc = estUpsertStudentAccount(saved, key);
     let pays = 0;
-    if (initial.inscripcionPagada && Number(initial.inscripcion) > 0) {
-      estAddCobroReal(saved._id, saved, 'Abono a inscripción · ' + saved.name + ' (' + saved.grade + ')', initial.inscripcion, initial.channel, initial.detalle);
-      pays++;
-    }
+    if (ip.inscripcionPagada && Number(ip.inscripcion) > 0) { estAddCobroReal(saved._id, saved, 'Abono a inscripción · ' + saved.name + ' (' + saved.grade + ')', ip.inscripcion, ip.channel, ip.detalle); pays++; }
     try { if (Store.saveState) Store.saveState(); } catch (_) {}
     toast('Estudiante guardado · matrícula ' + saved.matricula + ' · usuario ' + acc.email + ' · clave generada' + (pays ? ' · abono a inscripción registrado' : ''), 'ok');
     onClose();
@@ -147,18 +112,7 @@ function EstudianteModal({ entry, onClose }) {
       <div className="field-row"><Field label="Nombre del tutor"><TextInput value={form.tutor || ''} onChange={e => set('tutor', e.target.value)} /></Field><Field label="Teléfono"><TextInput value={form.phone || ''} onChange={e => set('phone', e.target.value)} /></Field></div>
       <div className="eyebrow">Documentos oficiales en PDF</div>
       <div className="grid" style={{ gridTemplateColumns: 'repeat(2,minmax(0,1fr))', gap: 10 }}>
-        {EST_OFFICIAL_DOCS.map(d => {
-          const doc = docs[d.key];
-          return <div key={d.key} className="card pad" style={{ boxShadow: 'none', border: '1px solid var(--border)' }}>
-            <div style={{ fontWeight: 700, fontSize: 13.5 }}>{d.label}</div>
-            <div className="faint" style={{ fontSize: 12, marginTop: 4, minHeight: 18 }}>{doc ? doc.name : 'PDF pendiente'}</div>
-            <div className="row gap-8" style={{ marginTop: 10, flexWrap: 'wrap' }}>
-              <label className="btn sm" style={{ cursor: 'pointer' }}><Icon name="upload" size={12} className="btn-ico" />Subir PDF<input type="file" accept="application/pdf,.pdf" style={{ display: 'none' }} onChange={e => estReadOfficialPdf(e.target.files[0], file => setDoc(d.key, file))} /></label>
-              {doc && <button className="btn sm" onClick={() => estOpenOfficialDoc(doc)}><Icon name="eye" size={12} className="btn-ico" />Ver</button>}
-              {doc && <button className="btn sm" onClick={() => setDoc(d.key, null)}><Icon name="trash" size={12} className="btn-ico" />Quitar</button>}
-            </div>
-          </div>;
-        })}
+        {EST_OFFICIAL_DOCS.map(d => { const doc = docs[d.key]; return <div key={d.key} className="card pad" style={{ boxShadow: 'none', border: '1px solid var(--border)' }}><div style={{ fontWeight: 700, fontSize: 13.5 }}>{d.label}</div><div className="faint" style={{ fontSize: 12, marginTop: 4, minHeight: 18 }}>{doc ? doc.name : 'PDF pendiente'}</div><div className="row gap-8" style={{ marginTop: 10, flexWrap: 'wrap' }}><label className="btn sm" style={{ cursor: 'pointer' }}><Icon name="upload" size={12} className="btn-ico" />Subir PDF<input type="file" accept="application/pdf,.pdf" style={{ display: 'none' }} onChange={e => estReadOfficialPdf(e.target.files[0], file => setDoc(d.key, file))} /></label>{doc && <button className="btn sm" onClick={() => estOpenOfficialDoc(doc)}><Icon name="eye" size={12} className="btn-ico" />Ver</button>}{doc && <button className="btn sm" onClick={() => setDoc(d.key, null)}><Icon name="trash" size={12} className="btn-ico" />Quitar</button>}</div></div>; })}
       </div>
       <div className="eyebrow">Plan de pagos</div>
       <Field label="Plan de pagos según nivel"><SelectInput style={{ minHeight: 42, width: '100%' }} value={form.plan || '10'} onChange={e => set('plan', e.target.value)} options={estPlanOptions(form.nivel)} /></Field>
