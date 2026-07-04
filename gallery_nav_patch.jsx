@@ -1,11 +1,25 @@
-/* gallery_nav_patch.jsx — agrega Galería a Comunicación y conserva parches ligeros estudiante */
+/* gallery_nav_patch.jsx — agrega Galería a Comunicación y carga parches finales */
 (function () {
+  function transformLateBabel() {
+    setTimeout(function () {
+      try { if (window.Babel && typeof Babel.transformScriptTags === 'function') Babel.transformScriptTags(); } catch (_) {}
+    }, 80);
+  }
   function loadScriptOnce(src) {
     if (document.querySelector('script[src*="' + src.split('?')[0] + '"]')) return;
     var s = document.createElement('script');
     s.src = src;
     s.async = false;
     document.head.appendChild(s);
+  }
+  function forceLoadBabel(src) {
+    if (document.querySelector('script[src="' + src + '"]')) return;
+    var s = document.createElement('script');
+    s.type = 'text/babel';
+    s.src = src;
+    s.async = false;
+    document.head.appendChild(s);
+    transformLateBabel();
   }
   function addRoute() {
     window.ROUTES = window.ROUTES || {};
@@ -19,5 +33,6 @@
     }));
   }
   loadScriptOnce('student_documents_label_patch.js?v=20260703-logo-no-signature');
+  forceLoadBabel('views_crm.jsx?v=20260704-real-only');
   addRoute();
 })();
