@@ -1,4 +1,4 @@
-/* student_documents_label_patch.js — reemplaza Acta tutor por Reporte Evaluación Anterior */
+/* student_documents_label_patch.js — documentos oficiales y puente de credencial final */
 (function(){
   var OLD_LABEL = 'Acta de Nacimiento del Tutor';
   var NEW_LABEL = 'Reporte de Evaluación Anterior del Estudiante';
@@ -47,9 +47,17 @@
       });
     }catch(e){}
   }
-  function tick(){ migrateDb(); patchStore(); replaceLabels(); }
+  function bridgeCredential(){
+    try{
+      if(window.StudentCredentialModal && window.StudentCredentialCard && typeof window.estPrintCredential === 'function'){
+        window.jpPrintCredential = window.estPrintCredential;
+        window.__jpStudentCredentialFinal = true;
+      }
+    }catch(e){}
+  }
+  function tick(){ migrateDb(); patchStore(); replaceLabels(); bridgeCredential(); }
   window.piagetMigrateStudentOfficialDocuments = function(){ migrateDb(); try{ if(window.Store && Store.saveState) Store.saveState(); }catch(e){} };
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', tick); else tick();
   var n = 0;
-  var t = setInterval(function(){ tick(); n++; if(n > 80) clearInterval(t); }, 250);
+  var t = setInterval(function(){ tick(); n++; if(n > 120) clearInterval(t); }, 250);
 })();
