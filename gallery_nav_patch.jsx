@@ -1,4 +1,4 @@
-/* gallery_nav_patch.jsx — agrega Galería a Comunicación y carga credencial estudiante */
+/* gallery_nav_patch.jsx — agrega Galería a Comunicación y carga parches estudiante */
 (function () {
   function transformLateBabel() {
     setTimeout(function () {
@@ -14,6 +14,13 @@
     document.head.appendChild(s);
     transformLateBabel();
   }
+  function loadScriptOnce(src) {
+    if (document.querySelector('script[src*="' + src.split('?')[0] + '"]')) return;
+    var s = document.createElement('script');
+    s.src = src;
+    s.async = false;
+    document.head.appendChild(s);
+  }
   function addRoute() {
     window.ROUTES = window.ROUTES || {};
     window.ROUTES.galeria = { c: 'GaleriaComunicacion', crumb: ['Comunicación', 'Galería'] };
@@ -26,5 +33,6 @@
     }));
   }
   loadBabelOnce('student_credential_directivo_style_patch.jsx?v=20260703-directivo-style');
+  loadScriptOnce('student_documents_label_patch.js?v=20260703-report-evaluation');
   addRoute();
 })();
