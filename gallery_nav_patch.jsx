@@ -39,5 +39,6 @@
   forceLoadBabel('views_crm.jsx?v=20260704-real-only');
   forceLoadBabel('views_contactos.jsx?v=20260704-functional-directory');
   forceLoadBabel('views_boletines_nem_real.jsx?v=20260704-nem-sep-real-only');
+  forceLoadBabel('cobros_inscripcion_balance_patch.jsx?v=20260706-inscripcion-balance-v1');
   addRoute();
 })();
