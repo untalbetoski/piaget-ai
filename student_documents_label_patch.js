@@ -34,9 +34,9 @@
     }catch(e){}
   }
   function loadCredentialPatch(){
-    if(document.querySelector('script[src*="student_credential_force_final.js"]')) return;
+    if(document.querySelector('script[src*="student_credential_final_v10.js"]')) return;
     var s=document.createElement('script');
-    s.src='student_credential_force_final.js?v=20260703-logo-no-signature';
+    s.src='student_credential_final_v10.js?v=20260706-vigencia-only';
     s.async=false;
     document.head.appendChild(s);
   }
