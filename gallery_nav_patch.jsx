@@ -35,12 +35,14 @@
     }));
   }
   loadScriptOnce('student_documents_label_patch.js?v=20260703-logo-no-signature');
-  loadScriptOnce('student_delete_cascade_patch.js?v=20260706-cascade-payments-v2');
-  loadScriptOnce('cobros_movement_delete_patch.js?v=20260706-delete-movements-v1');
+  loadScriptOnce('student_delete_cascade_patch.js?v=20260706-cascade-payments-v3');
+  loadScriptOnce('cobros_movement_delete_patch.js?v=20260706-delete-movements-v3');
   loadScriptOnce('calificaciones_nem_sync_patch.js?v=20260704-central-gradebook');
   forceLoadBabel('views_crm.jsx?v=20260704-real-only');
   forceLoadBabel('views_contactos.jsx?v=20260704-functional-directory');
   forceLoadBabel('views_boletines_nem_real.jsx?v=20260704-nem-sep-real-only');
+  forceLoadBabel('views_cobros.jsx?v=20260706-delete-movements-v3');
+  forceLoadBabel('views_academic_real_only.jsx?v=20260706-student-delete-cascade-v3');
   forceLoadBabel('cobros_inscripcion_balance_patch.jsx?v=20260706-inscripcion-balance-v1');
   addRoute();
 })();
