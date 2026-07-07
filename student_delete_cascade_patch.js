@@ -11,8 +11,8 @@
         var payments = ((window.DB && Array.isArray(DB.cobros)) ? DB.cobros : []).filter(function(c){
           if(!c) return false;
           if(String(c.sid||'') === String(id||'')) return true;
-          return !!name && norm(c.student || c.alumno || '') === name;
-        });
+          return !!name && norm(c.student || c.alumno || c.name || '') === name;
+        }).slice();
         payments.forEach(function(c){ if(c && c._id) originalRemove('cobros',c._id); });
         try{
           DB.settings = DB.settings || {};
@@ -20,6 +20,14 @@
             DB.settings.studentAccounts = DB.settings.studentAccounts.filter(function(a){
               return String(a.studentId||'') !== String(id||'') && (!stu || norm(a.email||'') !== norm(stu.email||''));
             });
+          }
+        }catch(_){}
+        try{
+          var key='piaget_cuentas_v2_real';
+          var accounts=JSON.parse(localStorage.getItem(key)||'{}')||{};
+          if(Object.prototype.hasOwnProperty.call(accounts,id)){
+            delete accounts[id];
+            localStorage.setItem(key,JSON.stringify(accounts));
           }
         }catch(_){}
         try{ Store.log && Store.log('Administración','eliminó estudiante y '+payments.length+' pago(s) relacionado(s)','trash'); }catch(_){}
