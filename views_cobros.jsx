@@ -23,7 +23,7 @@ function cobStatusBadge(s) {
 }
 
 function Cobros({ go }) {
-  const store = useStore();
+  useStore();
   const [tab, setTab] = React.useState('cuenta');
   const [filter, setFilter] = React.useState('Todos');
   const [payOpen, setPayOpen] = React.useState(false);
@@ -45,7 +45,7 @@ function Cobros({ go }) {
   const pctConc = list.length ? Math.round(conciliados.length / list.length * 100) : 0;
 
   const shown = list.filter(c => filter === 'Todos' || (filter === 'Conciliados' ? c.status === 'conciliado' : c.status === 'pendiente'))
-    .slice().sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
+    .slice().sort((a, b) => ((b.date || '') + (b.time || '')).localeCompare((a.date || '') + (a.time || '')));
 
   function conciliar(c) {
     Store.update('cobros', c._id, { status: 'conciliado' });
@@ -53,6 +53,16 @@ function Cobros({ go }) {
     const folio = window.factBorradorDeCobro ? window.factBorradorDeCobro(c) : null;
     if (folio) toast('Recibo ' + c.recibo + ' conciliado · borrador A-' + folio + ' listo para timbrar ✓');
     else toast('Recibo ' + c.recibo + ' conciliado ✓');
+  }
+
+  function eliminarMovimiento(c) {
+    if (!c || !c._id) return;
+    const who = c.student || c.family || 'este registro';
+    if (!confirm('¿Eliminar definitivamente el movimiento ' + (c.recibo || '') + ' de ' + who + '?\n\nEsta acción también actualizará el estado de cuenta y los saldos del alumno.')) return;
+    Store.remove('cobros', c._id);
+    try { Store.log('Tesorería', 'eliminó movimiento ' + (c.recibo || c._id) + ' · ' + who, 'trash'); } catch (_) {}
+    try { if (Store.saveState) Store.saveState(); } catch (_) {}
+    toast('Movimiento eliminado · saldos actualizados', 'warn');
   }
 
   const kpis = [
@@ -162,6 +172,7 @@ function Cobros({ go }) {
                         ...(c.status === 'pendiente' ? [{ icon: 'check', label: 'Conciliar', onClick: () => conciliar(c) }] : []),
                         { icon: 'mail', label: 'Reenviar recibo', onClick: () => toast('Recibo reenviado a ' + who + ' ✓') },
                         { icon: 'receipt', label: 'Generar factura', onClick: () => go('facturas') },
+                        { icon: 'trash', label: 'Eliminar movimiento', danger: true, onClick: () => eliminarMovimiento(c) },
                       ]} /></td>
                     </tr>
                   ); })}
