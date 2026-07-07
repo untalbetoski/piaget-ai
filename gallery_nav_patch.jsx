@@ -43,6 +43,7 @@
   forceLoadBabel('views_boletines_nem_real.jsx?v=20260704-nem-sep-real-only');
   forceLoadBabel('views_cobros.jsx?v=20260706-delete-movements-v3');
   forceLoadBabel('views_academic_real_only.jsx?v=20260706-student-delete-cascade-v3');
+  forceLoadBabel('student_access_dashboard_real.jsx?v=20260706-real-access-dashboard-v1');
   forceLoadBabel('cobros_inscripcion_balance_patch.jsx?v=20260706-inscripcion-balance-v1');
   addRoute();
 })();
